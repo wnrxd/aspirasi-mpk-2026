@@ -7,7 +7,7 @@
    C0. KONSTANTA — ganti tiga nilai di bawah ini
    ============================================================ */
 const SUPABASE_URL = "https://zlgrvzhlnmehmxhidmuy.supabase.co";
-const SUPABASE_KEY = "sb_publishable_ISI_KEY_KAMU";    // anon / publishable key
+const SUPABASE_KEY = "sb_publishable_qYyXngQuQCte0TnLSx-p9w_OXIO7p-H";    // anon / publishable key
 const ADMIN_EMAIL  = "mpkaspirasismancip@gmail.com";
 
 /* ============================================================
