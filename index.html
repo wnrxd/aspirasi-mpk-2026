@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aspirasi Digital MPK Mahardika SMAN 1 Cipari</title>
+<meta name="description" content="Wadah aspirasi anonim siswa untuk MPK Mahardika SMAN 1 Cipari.">
+<meta name="theme-color" content="#2F9BF4">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="intro-lock">
+
+<!-- Latar belakang: aurora + doodle -->
+<div class="bg" id="bg" aria-hidden="true">
+  <div class="aurora" id="aurora">
+    <div class="aurora-preset active" data-tab="beranda">
+      <span class="a1"></span><span class="a2"></span><span class="a3"></span>
+    </div>
+    <div class="aurora-preset" data-tab="aspirasi">
+      <span class="a1"></span><span class="a2"></span><span class="a3"></span>
+    </div>
+    <div class="aurora-preset" data-tab="event">
+      <span class="a1"></span><span class="a2"></span><span class="a3"></span>
+    </div>
+    <div class="aurora-preset" data-tab="tentang">
+      <span class="a1"></span><span class="a2"></span><span class="a3"></span>
+    </div>
+  </div>
+  <div class="doodles" id="doodles"></div>
+</div>
+
+<!-- Filter refraksi cair (Chromium saja) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="liquidFilter" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="14" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<!-- Layar intro -->
+<div class="intro" id="intro" role="button" tabindex="0"
+     aria-label="Ketuk untuk masuk ke Aspirasi Digital MPK">
+  <div class="intro-inner">
+    <img onerror="this.style.display='none'" class="intro-logo" src="/images/logo-mpk.jpeg" alt="Logo MPK Mahardika">
+    <h1>Selamat datang di Aspirasi Digital MPK</h1>
+    <p class="intro-hint">Ketuk untuk masuk</p>
+    <div class="intro-ring" aria-hidden="true"></div>
+  </div>
+</div>
+
+<!-- Navigasi tab -->
+<nav class="tabnav glass liquid" id="tabnav" role="tablist" aria-label="Navigasi utama">
+  <div class="tab-indicator" id="tabIndicator" aria-hidden="true"></div>
+  <button class="tab" id="tabBtn-beranda" role="tab" data-tab="beranda"
+          aria-selected="true" aria-controls="panel-beranda" tabindex="0">
+    <span class="tab-ico" aria-hidden="true">🏠</span>
+    <span class="tab-lbl">Beranda</span>
+  </button>
+  <button class="tab" id="tabBtn-aspirasi" role="tab" data-tab="aspirasi"
+          aria-selected="false" aria-controls="panel-aspirasi" tabindex="-1">
+    <span class="tab-ico" aria-hidden="true">💬</span>
+    <span class="tab-lbl">Aspirasi</span>
+  </button>
+  <button class="tab" id="tabBtn-event" role="tab" data-tab="event"
+          aria-selected="false" aria-controls="panel-event" tabindex="-1">
+    <span class="tab-ico" aria-hidden="true">🎉</span>
+    <span class="tab-lbl">Event</span>
+    <span class="lock-float" aria-hidden="true">🔒</span>
+  </button>
+  <button class="tab" id="tabBtn-tentang" role="tab" data-tab="tentang"
+          aria-selected="false" aria-controls="panel-tentang" tabindex="-1">
+    <span class="tab-ico" aria-hidden="true">ℹ️</span>
+    <span class="tab-lbl">Tentang</span>
+  </button>
+</nav>
+
+<main id="app" class="stage">
+
+  <!-- ============ BERANDA ============ -->
+  <section class="panel" id="panel-beranda" role="tabpanel" aria-labelledby="tabBtn-beranda">
+    <div class="hero">
+      <div class="logos">
+        <img onerror="this.style.display='none'" src="/images/smancip-logo.png" alt="Logo SMAN 1 Cipari">
+        <img onerror="this.style.display='none'" src="/images/logo-mpk.jpeg" alt="Logo MPK Mahardika">
+      </div>
+      <h1 class="hero-title">Aspirasi Digital MPK Mahardika SMAN 1 Cipari</h1>
+      <p class="hero-sub">Wadah aspirasi anonim untuk kemajuan sekolah kita. Suaramu didengar, tanpa perlu menyebut nama.</p>
+    </div>
+
+    <div class="lanyard" id="lanyard">
+      <div class="lanyard-string" aria-hidden="true"></div>
+      <div class="idcard glass liquid" id="idcard" aria-label="Kartu ID MPK. Bisa digeser.">
+        <img onerror="this.style.display='none'" class="idcard-logo" src="/images/logo-mpk.jpeg" alt="">
+        <p class="idcard-text">Suara Kamu Penting</p>
+        <p class="idcard-sub">MPK Mahardika</p>
+      </div>
+    </div>
+
+    <div class="stats" id="stats">
+      <div class="stat">
+        <span class="stat-num" id="statTotal" data-target="0">0</span>
+        <span class="stat-label">Total aspirasi</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="statSelesai" data-target="0">0</span>
+        <span class="stat-label">Sudah selesai</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ASPIRASI ============ -->
+  <section class="panel" id="panel-aspirasi" role="tabpanel" aria-labelledby="tabBtn-aspirasi" hidden>
+    <h2 class="panel-judul">Aspirasi</h2>
+    <p class="panel-desk">Sampaikan ide atau keluhanmu, atau lihat apa yang sudah teman-teman kirim.</p>
+
+    <div class="segmented" id="segAspirasi" role="tablist" aria-label="Mode aspirasi">
+      <div class="seg-indicator" id="segIndicator" aria-hidden="true"></div>
+      <button role="tab" data-seg="isi" aria-selected="true" tabindex="0">Isi Aspirasi</button>
+      <button role="tab" data-seg="daftar" aria-selected="false" tabindex="-1">Daftar</button>
+    </div>
+
+    <div id="subIsi">
+      <div class="form-kaca glass">
+        <label for="taIsi" class="sr-only">Tulis aspirasimu</label>
+        <textarea id="taIsi" maxlength="1000" placeholder="Tulis aspirasi, ide, atau masukanmu di sini…"></textarea>
+        <div class="form-baris">
+          <span class="penghitung" id="penghitung">1000 karakter tersisa</span>
+        </div>
+        <p class="catatan-anonim">🔒 Otomatis anonim — kami nggak menyimpan identitasmu.</p>
+        <div class="form-baris" style="justify-content:flex-end; margin-top:16px;">
+          <button class="tombol" id="btnKirim">
+            <span class="glow" aria-hidden="true"></span>
+            Kirim aspirasi
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="subDaftar" hidden>
+      <div class="offline-bar" id="offlineBar">
+        <span>📦 Data tersimpan, sedang mencoba terhubung…</span>
+        <button class="tombol netral kecil" id="btnRetry">Coba lagi</button>
+      </div>
+
+      <div class="list-toolbar">
+        <span class="list-hitung" id="listHitung">—</span>
+        <button class="tombol netral kecil" id="btnSegarkan">
+          <span class="glow" aria-hidden="true"></span>
+          Segarkan
+        </button>
+      </div>
+
+      <div class="list" id="listUmum" aria-live="polite"></div>
+
+      <div style="text-align:center; margin-top:20px;">
+        <button class="tombol netral" id="btnMuat" hidden>
+          <span class="glow" aria-hidden="true"></span>
+          Muat lebih banyak
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EVENT ============ -->
+  <section class="panel" id="panel-event" role="tabpanel" aria-labelledby="tabBtn-event" hidden>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:6px;">
+      <h2 class="panel-judul" style="margin:0;">Event spesial</h2>
+      <button class="tombol biru kecil" id="btnAddEvent" hidden>
+        <span class="glow" aria-hidden="true"></span>
+        + Tambah event baru
+      </button>
+    </div>
+    <p class="panel-desk">Aspirasi khusus untuk momen tertentu. Setiap event bisa dibuka atau dikunci oleh pengurus MPK.</p>
+
+    <div class="event-list" id="eventList"></div>
+    <div class="kosong" id="eventEmpty" hidden>Belum ada event yang dibuka pengurus MPK.</div>
+  </section>
+
+  <!-- ============ TENTANG ============ -->
+  <section class="panel" id="panel-tentang" role="tabpanel" aria-labelledby="tabBtn-tentang" hidden>
+    <h2 class="panel-judul">Cara kerjanya</h2>
+    <p class="panel-desk">Tiga langkah sederhana dari suaramu sampai jadi tindakan.</p>
+
+    <div class="langkah">
+      <div class="langkah-ikon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 10h12a6 6 0 0 1 6 6v22a5 5 0 0 0-5-5H6z"/>
+          <path d="M42 10H30a6 6 0 0 0-6 6v22a5 5 0 0 1 5-5h13z"/>
+          <path d="M12 18h6M12 24h6M30 18h6M30 24h6"/>
+        </svg>
+      </div>
+      <div>
+        <h3><span class="langkah-num">1</span>Kamu kirim</h3>
+        <p>Tulis aspirasimu di tab Aspirasi, atau di event tertentu kalau pengurus sedang membuka satu. Nggak perlu nama, nggak perlu login.</p>
+      </div>
+    </div>
+
+    <div class="langkah">
+      <div class="langkah-ikon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="20" cy="20" r="12"/>
+          <path d="M30 30l10 10"/>
+          <path d="M16 20h8M20 16v8"/>
+        </svg>
+      </div>
+      <div>
+        <h3><span class="langkah-num">2</span>MPK meninjau</h3>
+        <p>Pengurus MPK membaca tiap aspirasi, mengelompokkannya, lalu membahasnya bersama pihak sekolah yang berwenang.</p>
+      </div>
+    </div>
+
+    <div class="langkah">
+      <div class="langkah-ikon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 38V18l16-10 16 10v20"/>
+          <path d="M18 38V26h12v12"/>
+          <path d="M24 8v6"/>
+        </svg>
+      </div>
+      <div>
+        <h3><span class="langkah-num">3</span>Ditindaklanjuti</h3>
+        <p>Setelah ditangani, status aspirasi berubah jadi <em>Selesai</em>. Semua orang bisa lihat perkembangannya di daftar.</p>
+      </div>
+    </div>
+
+    <div class="status-arti glass">
+      <h3>Arti status</h3>
+      <div class="status-baris">
+        <span class="pill pill-hold">Hold</span>
+        <p>Menunggu tinjauan awal dari MPK. Baru masuk, belum dibahas.</p>
+      </div>
+      <div class="status-baris">
+        <span class="pill pill-diproses">Diproses</span>
+        <p>Sedang dikomunikasikan ke pihak sekolah yang terkait.</p>
+      </div>
+      <div class="status-baris">
+        <span class="pill pill-selesai">Selesai</span>
+        <p>Sudah ditindaklanjuti atau dijawab.</p>
+      </div>
+      <div class="status-baris">
+        <span class="pill pill-ditolak">Ditolak</span>
+        <p>Bukan ranah MPK, duplikat, atau tidak layak. Hanya admin yang bisa lihat.</p>
+      </div>
+    </div>
+
+    <div class="anon-box glass">
+      <h3>Soal anonimitas</h3>
+      <p>Kami benar-benar nggak menyimpan identitasmu: nggak ada IP, nggak ada user-agent, nggak ada nama. Satu-satunya yang tercatat adalah ID acak dari perangkatmu, cuma dipakai supaya kamu nggak bisa vote berkali-kali di aspirasi yang sama.</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- Tombol pengaturan -->
+<button class="settings-btn" id="settingsBtn" aria-label="Pengaturan" title="Pengaturan">⚙️</button>
+
+<!-- Modal pengaturan -->
+<div class="modal-back" id="settingsModal" hidden role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal glass">
+    <h2 id="settingsTitle">Pengaturan</h2>
+    <p class="ket">Sesuaikan tampilan dan akses.</p>
+
+    <div class="setting-row">
+      <div>
+        <div class="sr-label" id="adminLabel">Masuk sebagai Admin</div>
+        <div class="sr-desc" id="adminDesc">Kelola aspirasi &amp; event</div>
+      </div>
+      <button class="tombol biru kecil" id="btnAdminToggle">
+        <span class="glow" aria-hidden="true"></span>
+        Masuk
+      </button>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="sr-label">Mode ringan</div>
+        <div class="sr-desc" id="liteDesc">Otomatis</div>
+      </div>
+      <button class="toggle" id="tglLite" role="switch" aria-checked="false" aria-label="Mode ringan"></button>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="sr-label">Suara</div>
+        <div class="sr-desc" id="muteDesc">Aktif</div>
+      </div>
+      <button class="toggle on" id="tglMute" role="switch" aria-checked="true" aria-label="Suara"></button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="tombol netral" id="btnSettingsClose">
+        <span class="glow" aria-hidden="true"></span>
+        Tutup
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal login admin -->
+<div class="modal-back" id="loginModal" hidden role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="modal glass">
+    <h2 id="loginTitle">Masuk sebagai Admin</h2>
+    <p class="ket">Masukkan kode akses yang diberikan pengurus MPK.</p>
+    <label for="inpKode" class="sr-only">Kode akses</label>
+    <input id="inpKode" type="password" autocomplete="current-password" placeholder="Kode akses">
+    <div class="modal-actions">
+      <button class="tombol netral" id="btnLoginBatal">
+        <span class="glow" aria-hidden="true"></span>
+        Batal
+      </button>
+      <button class="tombol biru" id="btnLoginMasuk">
+        <span class="glow" aria-hidden="true"></span>
+        Masuk
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="false"></div>
+<canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+
+<script src="script.js" defer></script>
+</body>
+</html>
