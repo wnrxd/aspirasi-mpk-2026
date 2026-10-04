@@ -46,7 +46,7 @@
 <div class="intro" id="intro" role="button" tabindex="0"
      aria-label="Ketuk untuk masuk ke Aspirasi Digital MPK">
   <div class="intro-inner">
-    <img onerror="this.style.display='none'" class="intro-logo" src="/images/logo-mpk.jpeg" alt="Logo MPK Mahardika">
+    <img class="intro-logo" data-logo="mpk" alt="Logo MPK Mahardika">
     <h1>Selamat datang di Aspirasi Digital MPK</h1>
     <p class="intro-hint">Ketuk untuk masuk</p>
     <div class="intro-ring" aria-hidden="true"></div>
@@ -85,8 +85,8 @@
   <section class="panel" id="panel-beranda" role="tabpanel" aria-labelledby="tabBtn-beranda">
     <div class="hero">
       <div class="logos">
-        <img onerror="this.style.display='none'" src="/images/smancip-logo.png" alt="Logo SMAN 1 Cipari">
-        <img onerror="this.style.display='none'" src="/images/logo-mpk.jpeg" alt="Logo MPK Mahardika">
+        <img data-logo="smancip" alt="Logo SMAN 1 Cipari">
+        <img data-logo="mpk" alt="Logo MPK Mahardika">
       </div>
       <h1 class="hero-title">Aspirasi Digital MPK Mahardika SMAN 1 Cipari</h1>
       <p class="hero-sub">Wadah aspirasi anonim untuk kemajuan sekolah kita. Suaramu didengar, tanpa perlu menyebut nama.</p>
@@ -95,7 +95,7 @@
     <div class="lanyard" id="lanyard">
       <div class="lanyard-string" aria-hidden="true"></div>
       <div class="idcard glass liquid" id="idcard" aria-label="Kartu ID MPK. Bisa digeser.">
-        <img onerror="this.style.display='none'" class="idcard-logo" src="/images/logo-mpk.jpeg" alt="Logo MPK Mahardika">
+        <img class="idcard-logo" data-logo="mpk" alt="Logo MPK Mahardika">
         <p class="idcard-text">Suara Kamu Penting</p>
         <p class="idcard-sub">Kartu MPK Mahardika · SMAN 1 Cipari</p>
         <p class="idcard-hint">Tarik kartunya, boleh kok</p>
@@ -351,6 +351,10 @@
 <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="false"></div>
 <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
 
+<div class="corner-logo kiri"><img data-logo="mpk" alt="Logo MPK Mahardika"></div>
+<div class="corner-logo kanan"><img data-logo="smancip" alt="Logo SMAN 1 Cipari"></div>
+
+<script src="logos.js"></script>
 <script src="script.js" defer></script>
 </body>
 </html>
