@@ -1158,3 +1158,47 @@ html{ scrollbar-gutter:stable; }
   box-shadow:0 8px 20px rgba(184,73,63,.32), inset 0 1px 0 rgba(255,255,255,.35);
 }
 .card.hapus-out{ opacity:0; transform:scale(.97); transition:opacity .3s ease, transform .3s ease; }
+
+
+/* ============================================================
+   PEMBARUAN C1: logo di pojok, logo di lanyard
+   ============================================================ */
+.corner-logo{
+  position:fixed; z-index:70;
+  top:calc(14px + env(safe-area-inset-top, 0px));
+  width:clamp(40px, 4.4vw, 56px); height:clamp(40px, 4.4vw, 56px);
+  border-radius:16px; overflow:hidden;
+  pointer-events:none;
+}
+.corner-logo img{ display:block; width:100%; height:100%; }
+.corner-logo.kiri{ left:clamp(12px, 2vw, 24px); box-shadow:0 6px 16px rgba(31,58,61,.25); }
+.corner-logo.kiri img{ object-fit:cover; }
+.corner-logo.kanan{
+  right:clamp(12px, 2vw, 24px);
+  background:var(--kaca-isi); border:1px solid var(--kaca-border);
+  box-shadow:var(--bayang-1);
+}
+.corner-logo.kanan img{ object-fit:contain; padding:5px; }
+/* logo MPK berlatar gelap: tampilkan apa adanya, jangan di-multiply */
+.idcard-logo, .intro-logo{ mix-blend-mode:normal; background:transparent; }
+.idcard-logo{
+  display:block; width:64px; height:64px; margin:0 auto 10px;
+  border-radius:14px; object-fit:cover;
+  box-shadow:0 4px 12px rgba(31,58,61,.28);
+}
+.intro-logo{ border-radius:24px; }
+/* logo sudah ada di pojok, baris logo di hero disembunyikan */
+.logos{ display:none; }
+@media (max-width:760px){
+  #app{ padding-top:72px; }
+}
+
+
+/* ============================================================
+   PEMBARUAN C2: logo transparan
+   ============================================================ */
+.corner-logo.kiri{ background:var(--kaca-isi); border:1px solid var(--kaca-border); box-shadow:var(--bayang-1); }
+.corner-logo.kiri img{ object-fit:contain; padding:5px; border-radius:0; }
+.idcard-logo{ width:68px; height:68px; object-fit:contain; border-radius:0; box-shadow:none;
+  filter:drop-shadow(0 4px 8px rgba(31,58,61,.25)); }
+.intro-logo{ border-radius:0; }
