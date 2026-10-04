@@ -279,6 +279,7 @@ async function loadListEventPage(eventId, offset, append){
   });
   if (bucket.loading) return;
   bucket.loading = true;
+  if (!bucket.items.length) renderEventBody(eventId); // tampilkan skeleton selama memuat
 
   const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id&event_id=eq.${eventId}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
@@ -288,11 +289,15 @@ async function loadListEventPage(eventId, offset, append){
     bucket.offset = offset + rows.length;
     bucket.hasMore = r.data.length > 20;
     bucket.loaded = true;
+    bucket.error = false;
     cacheSet('mpk_v32_list_event_' + eventId + '_p1', bucket.items);
     renderEventBody(eventId);
   } else {
     const cached = cacheGet('mpk_v32_list_event_' + eventId + '_p1');
-    if (!bucket.loaded && cached){ bucket.items = cached; bucket.loaded = true; renderEventBody(eventId); }
+    if (!bucket.loaded && cached){ bucket.items = cached; bucket.loaded = true; }
+    bucket.loading = false;
+    bucket.error = !bucket.items.length;
+    renderEventBody(eventId); // jangan biarkan skeleton menggantung kalau gagal
   }
   bucket.loading = false;
 }
@@ -1183,6 +1188,13 @@ function renderEventList(){
       btnLock.innerHTML = '<span class="glow"></span>' + (ev.locked ? 'Buka' : 'Kunci');
       btnLock.addEventListener('click', () => toggleEventLock(ev));
       rn.appendChild(inp); rn.appendChild(btnSave); rn.appendChild(btnLock);
+      if (ev.locked){
+        const btnDel = document.createElement('button');
+        btnDel.className = 'tombol netral kecil';
+        btnDel.innerHTML = '<span class="glow"></span>Hapus event';
+        btnDel.addEventListener('click', () => onDeleteEvent(ev));
+        rn.appendChild(btnDel);
+      }
       card.appendChild(rn);
     }
 
@@ -1285,11 +1297,6 @@ function renderEventBody(eventId){
       b.offset = 0;
       await loadListEventPage(eventId, 0, false);
     });
-  } else {
-    const note = document.createElement('div');
-    note.className = 'event-locked-note';
-    note.textContent = 'Event ini sedang dikunci pengurus MPK. Aspirasi baru belum dibuka, tapi kamu masih bisa lihat aspirasi sebelumnya.';
-    inner.appendChild(note);
   }
 
   // daftar aspirasi event
@@ -1303,7 +1310,9 @@ function renderEventBody(eventId){
   } else if (!b.items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    k.textContent = 'Belum ada aspirasi untuk event ini.';
+    k.textContent = b.error
+      ? 'Aspirasi belum bisa dimuat. Tutup lalu buka lagi event ini.'
+      : (ev.locked ? 'Belum ada aspirasi di event ini.' : 'Belum ada aspirasi di sini. Jadilah yang pertama!');
     list.appendChild(k);
   } else {
     b.items.forEach((a, i) => list.appendChild(buildCard(a, i < 3)));
@@ -1347,6 +1356,21 @@ async function toggleEventLock(ev){
   const b = state.listEvent[ev.id];
   if (b && b.open) renderEventBody(ev.id);
   toast(ev.locked ? 'Event dikunci' : 'Event dibuka');
+}
+
+async function onDeleteEvent(ev){
+  if (!ev.locked){ toast('Kunci event dulu sebelum menghapus', { err: true }); return; }
+  const ok = await askConfirm('Event "' + ev.nama + '" akan dihapus permanen BESERTA semua aspirasi dan dukungan di dalamnya. Tidak bisa dikembalikan. Lanjutkan?', 'Hapus event');
+  if (!ok) return;
+  const r = await api('/rest/v1/rpc/admin_delete_event', { method: 'POST', body: { p_id: ev.id } });
+  if (!r.ok){ toast(r.error || 'Gagal menghapus event', { err: true }); return; }
+  state.events = state.events.filter(e => e.id !== ev.id);
+  delete state.listEvent[ev.id];
+  cacheSet(K.events, state.events);
+  updateEventGate();
+  renderEventList();
+  loadStats();
+  toast('Event dihapus');
 }
 
 async function onCreateEvent(){
