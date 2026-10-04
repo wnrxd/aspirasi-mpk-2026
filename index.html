@@ -95,9 +95,10 @@
     <div class="lanyard" id="lanyard">
       <div class="lanyard-string" aria-hidden="true"></div>
       <div class="idcard glass liquid" id="idcard" aria-label="Kartu ID MPK. Bisa digeser.">
-        <img onerror="this.style.display='none'" class="idcard-logo" src="/images/logo-mpk.jpeg" alt="">
+        <img onerror="this.style.display='none'" class="idcard-logo" src="/images/logo-mpk.jpeg" alt="Logo MPK Mahardika">
         <p class="idcard-text">Suara Kamu Penting</p>
-        <p class="idcard-sub">MPK Mahardika</p>
+        <p class="idcard-sub">Kartu MPK Mahardika · SMAN 1 Cipari</p>
+        <p class="idcard-hint">Tarik kartunya, boleh kok</p>
       </div>
     </div>
 
@@ -145,6 +146,14 @@
       <div class="offline-bar" id="offlineBar">
         <span>📦 Data tersimpan, sedang mencoba terhubung…</span>
         <button class="tombol netral kecil" id="btnRetry">Coba lagi</button>
+      </div>
+
+      <div class="filter-chips" id="filterChips" role="group" aria-label="Filter status aspirasi">
+        <button type="button" class="chip on" data-s="all" aria-pressed="true">Semua</button>
+        <button type="button" class="chip" data-s="Hold" aria-pressed="false">Hold</button>
+        <button type="button" class="chip" data-s="Diproses" aria-pressed="false">Diproses</button>
+        <button type="button" class="chip" data-s="Selesai" aria-pressed="false">Selesai</button>
+        <button type="button" class="chip" data-s="Ditolak" aria-pressed="false">Ditolak</button>
       </div>
 
       <div class="list-toolbar">
@@ -296,6 +305,24 @@
       <button class="tombol netral" id="btnSettingsClose">
         <span class="glow" aria-hidden="true"></span>
         Tutup
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal konfirmasi hapus -->
+<div class="modal-back" id="confirmModal" hidden role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="modal glass">
+    <h2 id="confirmTitle">Hapus aspirasi?</h2>
+    <p class="ket" id="confirmText"></p>
+    <div class="modal-actions">
+      <button class="tombol netral" id="btnConfirmNo">
+        <span class="glow" aria-hidden="true"></span>
+        Batal
+      </button>
+      <button class="tombol bahaya" id="btnConfirmYes">
+        <span class="glow" aria-hidden="true"></span>
+        Hapus
       </button>
     </div>
   </div>
