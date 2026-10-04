@@ -290,6 +290,7 @@ async function loadListEventPage(eventId, offset, append){
     bucket.hasMore = r.data.length > 20;
     bucket.loaded = true;
     bucket.error = false;
+    bucket.loading = false; // harus mati sebelum render, kalau tidak event kosong tampil sebagai skeleton
     cacheSet('mpk_v32_list_event_' + eventId + '_p1', bucket.items);
     renderEventBody(eventId);
   } else {
@@ -1025,18 +1026,16 @@ async function submitAspirasi(ta, cnt, btn, eventId){
   if (!isi){ toast('Tulis aspirasimu dulu ya', { err: true }); ta.focus(); return; }
   if (isi.length > 1000){ toast('Aspirasi maksimal 1000 karakter', { err: true }); return; }
 
+  // Simpan label asli sekali saja, lalu ganti seluruh isi tombol (ikon kilau + satu teks).
+  if (!btn.dataset.label) btn.dataset.label = btn.textContent.trim();
+  const glow = btn.querySelector('.glow');
+  const setLabel = (txt) => {
+    btn.replaceChildren();
+    if (glow) btn.appendChild(glow);
+    btn.appendChild(document.createTextNode(txt));
+  };
   btn.disabled = true;
-  const old = btn.childNodes[btn.childNodes.length - 1];
-  const oldText = btn.lastChild && btn.lastChild.nodeType === 3 ? btn.lastChild.nodeValue : null;
-
-  // Simpan label asli
-  const originalLabel = btn.textContent.trim();
-  btn.childNodes.forEach(n => { if (n.nodeType === 3) n.nodeValue = ''; });
-  const labelEl = document.createElement('span');
-  labelEl.className = 'btn-label';
-  labelEl.textContent = 'Mengirim…';
-  // Sisipkan sebelum teks terakhir
-  btn.appendChild(labelEl);
+  setLabel('Mengirim…');
 
   const r = await api('/rest/v1/rpc/submit_aspirasi', {
     method: 'POST',
@@ -1044,12 +1043,7 @@ async function submitAspirasi(ta, cnt, btn, eventId){
   });
 
   btn.disabled = false;
-  labelEl.remove();
-  btn.childNodes.forEach(n => { if (n.nodeType === 3 && !n.nodeValue.trim()) n.nodeValue = originalLabel; });
-  if (!Array.from(btn.childNodes).some(n => n.nodeType === 3 && n.nodeValue.trim()) && !btn.querySelector('.btn-label')){
-    // pastikan label kembali
-    btn.appendChild(document.createTextNode(originalLabel));
-  }
+  setLabel(btn.dataset.label);
 
   if (!r.ok){ toast(r.error || 'Gagal mengirim aspirasi', { err: true }); return; }
 
