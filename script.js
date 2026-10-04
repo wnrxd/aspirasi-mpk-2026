@@ -74,7 +74,8 @@ const state = {
   admin: { active: false, token: null, refresh: null, expiresAt: 0 },
   events: [],
   eventsLoaded: false,
-  listUmum: { items: [], offset: 0, hasMore: false, loading: false, inited: false },
+  listUmum: { items: [], offset: 0, hasMore: false, loading: false, inited: false, seq: 0 },
+  filter: 'all', // filter status daftar umum
   listEvent: {}, // { [eventId]: {items, offset, hasMore, loading, loaded, open} }
   stats: { total: 0, selesai: 0 },
   voted: getVotedIds(),
@@ -96,6 +97,8 @@ const state = {
    ============================================================ */
 const toastWrap = $('#toastWrap');
 function toast(msg, opts = {}){
+  // Pesan yang sama tidak ditumpuk: cukup satu toast aktif
+  for (const t of toastWrap.children){ if (t.textContent === msg && !t.classList.contains('out')) return; }
   const el = document.createElement('div');
   el.className = 'toast' + (opts.err ? ' err' : '');
   el.textContent = msg;
@@ -231,11 +234,14 @@ async function loadEvents(){
 }
 
 async function loadListUmumPage(offset, append){
-  if (state.listUmum.loading) return;
+  if (state.listUmum.loading && append) return;
   state.listUmum.loading = true;
+  const my = state.listUmum.seq = (state.listUmum.seq | 0) + 1;
+  const fq = state.filter !== 'all' ? '&status=eq.' + encodeURIComponent(state.filter) : '';
 
-  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id&event_id=is.null&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
+  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id&event_id=is.null${fq}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
+  if (my !== state.listUmum.seq) return; // ada permintaan yang lebih baru (mis. filter diganti)
 
   if (r.ok && Array.isArray(r.data)){
     const rows = r.data.slice(0, 20);
@@ -244,12 +250,12 @@ async function loadListUmumPage(offset, append){
     state.listUmum.offset = offset + rows.length;
     state.listUmum.hasMore = hasMore;
     state.listUmum.inited = true;
-    if (offset === 0) cacheSet(K.listU, rows);
+    if (offset === 0 && state.filter === 'all') cacheSet(K.listU, rows);
     renderListUmum();
     setOffline(false);
   } else {
     if (!state.listUmum.inited){
-      const cached = cacheGet(K.listU);
+      const cached = state.filter === 'all' ? cacheGet(K.listU) : null;
       if (cached){
         state.listUmum.items = cached;
         state.listUmum.inited = true;
@@ -794,7 +800,9 @@ function renderListUmum(){
   if (!items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    k.textContent = 'Belum ada aspirasi. Jadilah yang pertama mengirim!';
+    k.textContent = state.filter === 'all'
+      ? 'Belum ada aspirasi. Jadilah yang pertama mengirim!'
+      : 'Belum ada aspirasi dengan status ' + state.filter + '.';
     el.appendChild(k);
     $('#listHitung').textContent = '0 aspirasi';
     $('#btnMuat').hidden = true;
@@ -840,6 +848,10 @@ function buildCard(a, reveal){
   num.textContent = String(a.votes | 0);
   vbtn.appendChild(arrow); vbtn.appendChild(num);
   vbtn.addEventListener('click', () => onVote(a, vbtn, num));
+  if (a.status === 'Ditolak'){
+    vbtn.disabled = true;
+    vbtn.title = 'Aspirasi yang ditolak tidak bisa didukung';
+  }
   foot.appendChild(vbtn);
 
   // Admin controls
@@ -854,6 +866,13 @@ function buildCard(a, reveal){
     });
     sel.addEventListener('change', () => onStatusChange(a, sel));
     foot.appendChild(sel);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'tombol netral kecil';
+    del.innerHTML = '<span class="glow"></span>Hapus';
+    del.addEventListener('click', () => onDeleteAspirasi(a, card));
+    foot.appendChild(del);
   }
 
   card.appendChild(top);
@@ -927,6 +946,8 @@ async function onStatusChange(a, sel){
   const card = sel.closest('.card');
   const pill = card && card.querySelector('.pill');
   if (pill){ pill.className = pillClass(next); pill.textContent = next; }
+  const vb = card && card.querySelector('.vote-btn');
+  if (vb){ vb.disabled = next === 'Ditolak'; vb.title = vb.disabled ? 'Aspirasi yang ditolak tidak bisa didukung' : ''; }
   toast('Status diperbarui');
 }
 
@@ -1110,6 +1131,7 @@ function renderEventList(){
     const card = document.createElement('article');
     card.className = 'event-card glass';
     card.dataset.id = ev.id;
+    card.classList.toggle('is-locked', !!ev.locked);
 
     const head = document.createElement('div');
     head.className = 'event-head';
@@ -1124,19 +1146,26 @@ function renderEventList(){
 
     const badge = document.createElement('span');
     badge.className = 'pill ' + (ev.locked ? 'pill-locked' : 'pill-open');
-    badge.textContent = ev.locked ? 'Terkunci' : 'Terbuka';
+    badge.textContent = ev.locked ? '🔒 Terkunci' : 'Terbuka';
     right.appendChild(badge);
 
     const toggle = document.createElement('button');
     toggle.className = 'event-toggle';
     toggle.type = 'button';
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.innerHTML = '<span>Lihat</span>';
+    toggle.innerHTML = '<span>' + (ev.locked ? 'Lihat arsip' : 'Lihat') + '</span>';
     toggle.addEventListener('click', () => toggleEvent(card, ev));
     right.appendChild(toggle);
 
     head.appendChild(right);
     card.appendChild(head);
+
+    const stat = document.createElement('p');
+    stat.className = 'event-status';
+    stat.textContent = ev.locked
+      ? 'Sedang ditutup pengurus MPK. Aspirasi baru belum diterima, arsip lama tetap bisa dilihat.'
+      : 'Terbuka. Kamu bisa mengirim aspirasi untuk event ini.';
+    card.appendChild(stat);
 
     // admin inline rename
     if (state.admin.active){
@@ -1160,10 +1189,22 @@ function renderEventList(){
     // body (hidden, diload saat dibuka)
     const body = document.createElement('div');
     body.className = 'event-body';
-    body.hidden = true;
+    body.inert = true;
+    const inner = document.createElement('div');
+    inner.className = 'eb-in';
+    body.appendChild(inner);
     card.appendChild(body);
 
     wrap.appendChild(card);
+
+    // pulihkan kondisi terbuka setelah daftar dirender ulang
+    const bk = state.listEvent[ev.id];
+    if (bk && bk.open){
+      body.classList.add('open'); body.inert = false;
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.querySelector('span').textContent = 'Tutup';
+      renderEventBody(ev.id);
+    }
   });
 }
 
@@ -1173,20 +1214,22 @@ async function toggleEvent(card, ev){
   const bucket = state.listEvent[ev.id] || (state.listEvent[ev.id] = {
     items: [], offset: 0, hasMore: false, loading: false, loaded: false, open: false
   });
+  const lbl = ev.locked ? 'Lihat arsip' : 'Lihat';
 
   if (!bucket.open){
     bucket.open = true;
-    body.hidden = false;
-    body.classList.remove('anim'); void body.offsetWidth; body.classList.add('anim');
+    renderEventBody(ev.id);
+    body.inert = false;
+    body.classList.add('open');
     toggle.setAttribute('aria-expanded', 'true');
     toggle.querySelector('span').textContent = 'Tutup';
-    renderEventBody(ev.id);
     if (!bucket.loaded) loadListEventPage(ev.id, 0, false);
   } else {
     bucket.open = false;
-    body.hidden = true;
+    body.classList.remove('open');
+    body.inert = true;
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.querySelector('span').textContent = 'Lihat';
+    toggle.querySelector('span').textContent = lbl;
   }
 }
 
@@ -1194,9 +1237,10 @@ function renderEventBody(eventId){
   const card = document.querySelector('.event-card[data-id="' + eventId + '"]');
   if (!card) return;
   const body = card.querySelector('.event-body');
+  const inner = body.querySelector('.eb-in');
   const ev = state.events.find(e => e.id === eventId);
   const b = state.listEvent[eventId] || { items: [], hasMore: false, loading: false };
-  body.innerHTML = '';
+  inner.innerHTML = '';
 
   if (!ev.locked){
     // form
@@ -1217,7 +1261,7 @@ function renderEventBody(eventId){
     kirim.innerHTML = '<span class="glow"></span>Kirim aspirasi';
     foot.appendChild(cnt); foot.appendChild(kirim);
     form.appendChild(ta); form.appendChild(foot);
-    body.appendChild(form);
+    inner.appendChild(form);
 
     ta.addEventListener('input', () => {
       const sisa = 1000 - ta.value.length;
@@ -1245,7 +1289,7 @@ function renderEventBody(eventId){
     const note = document.createElement('div');
     note.className = 'event-locked-note';
     note.textContent = 'Event ini sedang dikunci pengurus MPK. Aspirasi baru belum dibuka, tapi kamu masih bisa lihat aspirasi sebelumnya.';
-    body.appendChild(note);
+    inner.appendChild(note);
   }
 
   // daftar aspirasi event
@@ -1264,7 +1308,7 @@ function renderEventBody(eventId){
   } else {
     b.items.forEach((a, i) => list.appendChild(buildCard(a, i < 3)));
   }
-  body.appendChild(list);
+  inner.appendChild(list);
 
   if (b.hasMore){
     const wrapMore = document.createElement('div');
@@ -1275,7 +1319,7 @@ function renderEventBody(eventId){
     btn.innerHTML = '<span class="glow"></span>Muat lebih banyak';
     btn.addEventListener('click', () => loadListEventPage(eventId, b.offset, true));
     wrapMore.appendChild(btn);
-    body.appendChild(wrapMore);
+    inner.appendChild(wrapMore);
   }
 }
 
@@ -1285,9 +1329,7 @@ async function saveEventName(ev, val){
     body: { p_id: ev.id, p_nama: val }
   });
   if (!r.ok){ toast(r.error || 'Gagal mengganti nama', { err: true }); return; }
-  ev.nama = r.data.nama;
-  cacheSet(K.events, state.events);
-  renderEventList();
+  await loadEvents(); // ambil nama terbaru dari server (RPC hanya mengembalikan success)
   toast('Nama event diperbarui');
 }
 
@@ -1297,7 +1339,7 @@ async function toggleEventLock(ev){
     body: { p_id: ev.id, p_locked: !ev.locked }
   });
   if (!r.ok){ toast(r.error || 'Gagal mengubah kunci event', { err: true }); return; }
-  ev.locked = r.data.locked;
+  ev.locked = !ev.locked; // RPC hanya mengembalikan success, jadi balik nilai lokal
   cacheSet(K.events, state.events);
   updateEventGate();
   renderEventList();
@@ -1312,6 +1354,66 @@ async function onCreateEvent(){
   if (!r.ok){ toast(r.error || 'Gagal membuat event', { err: true }); return; }
   await loadEvents();
   toast('Event baru dibuat');
+}
+
+/* ============================================================
+   KONFIRMASI, HAPUS, FILTER
+   ============================================================ */
+function askConfirm(text, yesLabel){
+  return new Promise(resolve => {
+    const m = $('#confirmModal');
+    $('#confirmText').textContent = text;
+    const yes = $('#btnConfirmYes'), no = $('#btnConfirmNo');
+    yes.lastChild.textContent = yesLabel || 'Hapus';
+    const done = (v) => {
+      yes.removeEventListener('click', onYes); no.removeEventListener('click', onNo);
+      m.removeEventListener('click', onBack);
+      closeModal(m); resolve(v);
+    };
+    const onYes = () => done(true), onNo = () => done(false);
+    const onBack = (e) => { if (e.target === m) done(false); };
+    yes.addEventListener('click', onYes); no.addEventListener('click', onNo);
+    m.addEventListener('click', onBack);
+    openModal(m); no.focus();
+  });
+}
+
+async function onDeleteAspirasi(a, card){
+  const ok = await askConfirm('Aspirasi ini akan dihapus permanen beserta dukungannya dan tidak bisa dikembalikan. Lanjutkan?', 'Hapus');
+  if (!ok) return;
+  const r = await api('/rest/v1/rpc/admin_delete_aspirasi', { method: 'POST', body: { p_id: a.id } });
+  if (!r.ok){ toast(r.error || 'Gagal menghapus aspirasi', { err: true }); return; }
+  state.listUmum.items = state.listUmum.items.filter(x => x.id !== a.id);
+  if (a.event_id && state.listEvent[a.event_id]){
+    const b = state.listEvent[a.event_id];
+    b.items = b.items.filter(x => x.id !== a.id);
+  }
+  if (card){
+    card.classList.add('hapus-out');
+    setTimeout(() => {
+      if (a.event_id) renderEventBody(a.event_id); else renderListUmum();
+    }, 300);
+  }
+  loadStats();
+  toast('Aspirasi dihapus');
+}
+
+function initFilterChips(){
+  const wrap = $('#filterChips');
+  if (!wrap) return;
+  wrap.addEventListener('click', (e) => {
+    const b = e.target.closest('.chip');
+    if (!b || b.dataset.s === state.filter) return;
+    state.filter = b.dataset.s;
+    wrap.querySelectorAll('.chip').forEach(x => {
+      const on = x === b;
+      x.classList.toggle('on', on);
+      x.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    state.listUmum.items = []; state.listUmum.offset = 0; state.listUmum.hasMore = false; state.listUmum.inited = false;
+    renderListUmumSkeleton();
+    loadListUmumPage(0, false);
+  });
 }
 
 /* ============================================================
@@ -1714,6 +1816,7 @@ function prefetchAll(){
    INIT
    ============================================================ */
 function init(){
+  initFilterChips();
   // intro inert
   $('#tabnav').setAttribute('inert', '');
   $('#app').setAttribute('inert', '');
