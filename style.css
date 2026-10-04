@@ -1085,3 +1085,76 @@ body.lite .liquid{
 }
 /* Logo: latar putih JPEG melebur ke krem */
 .logos img,.idcard-logo{ mix-blend-mode:multiply; background:transparent; }
+
+
+/* ============================================================
+   PEMBARUAN A: krem diredupkan, kaca frosted krem, event, scroll, lanyard
+   ============================================================ */
+:root{
+  --krem:#E4D8BE;
+  --teks-lembut:#3F5A5E;
+  --teks-samar:#5C7276;
+  --kaca-isi: linear-gradient(145deg, rgba(246,239,222,.74), rgba(236,226,203,.44));
+  --kaca-border: rgba(255,250,236,.55);
+  --kaca-inset: inset 0 1px 0 rgba(255,251,240,.7), inset 0 -1px 0 rgba(255,250,236,.14);
+}
+body{
+  background-color:var(--krem);
+  background-image:
+    radial-gradient(1100px 680px at 8% -12%, rgba(47,155,244,.30), transparent 62%),
+    radial-gradient(900px 620px at 102% -6%, rgba(255,210,63,.30), transparent 58%),
+    radial-gradient(1000px 760px at 50% 118%, rgba(63,184,113,.24), transparent 62%),
+    radial-gradient(760px 560px at 92% 76%, rgba(240,138,114,.16), transparent 62%);
+}
+.idcard{ background:linear-gradient(150deg, rgba(246,239,222,.8), rgba(236,226,203,.5)); }
+.idcard::before{ background:linear-gradient(150deg, rgba(246,239,222,.9), rgba(236,226,203,.55)); }
+.segmented{ background:linear-gradient(145deg, rgba(246,239,222,.7), rgba(236,226,203,.4)); }
+.idcard-sub{ text-transform:none; letter-spacing:.02em; }
+.idcard-hint{ margin:12px 0 0; font-size:12px; color:var(--teks-samar); }
+
+/* scrollbar selalu menyediakan ruang: tidak ada lompatan lebar saat pindah tab */
+html{ scrollbar-gutter:stable; }
+
+/* kartu event */
+.event-status{ margin:10px 0 0; font-size:13.5px; color:var(--teks-lembut); }
+.event-card.is-locked{
+  background-image:linear-gradient(rgba(70,78,84,.12), rgba(70,78,84,.12)), var(--kaca-isi);
+}
+.event-card.is-locked .event-nama{ color:var(--teks-lembut); }
+.pill-locked{ background:rgba(90,100,108,.28); border-color:rgba(90,100,108,.45); color:#3C474D; font-weight:700; }
+
+/* buka-tutup halus: tinggi dianimasikan lewat grid, isi memudar */
+.event-body{ display:grid; grid-template-rows:0fr; overflow:visible;
+  transition:grid-template-rows .4s cubic-bezier(.22,1,.36,1); }
+.event-body.open{ grid-template-rows:1fr; }
+.eb-in{ min-height:0; overflow:hidden; opacity:0; transition:opacity .25s ease; }
+.event-body.open .eb-in{ opacity:1; transition-delay:.08s; }
+@media (prefers-reduced-motion: reduce){
+  .event-body, .eb-in{ transition:none; }
+}
+
+
+/* ============================================================
+   PEMBARUAN B: filter status, hapus aspirasi
+   ============================================================ */
+.filter-chips{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+.chip{
+  border:1px solid var(--kaca-border);
+  background:linear-gradient(145deg, rgba(246,239,222,.7), rgba(236,226,203,.4));
+  color:var(--teks);
+  font:600 13px 'Inter', sans-serif;
+  padding:8px 14px; min-height:40px;
+  border-radius:var(--r-pill);
+  cursor:pointer;
+  transition:transform .15s ease, background-color .2s ease, color .2s ease;
+}
+.chip:active{ transform:scale(.96); }
+.chip.on{ background:var(--biru-2); border-color:var(--biru-2); color:#fff; }
+.chip:focus-visible{ outline:3px solid var(--biru-1); outline-offset:2px; }
+.vote-btn:disabled{ opacity:.5; cursor:not-allowed; }
+.tombol.bahaya{
+  background:linear-gradient(150deg, #D96A5E, #B8493F);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(184,73,63,.32), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.card.hapus-out{ opacity:0; transform:scale(.97); transition:opacity .3s ease, transform .3s ease; }
