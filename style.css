@@ -1202,3 +1202,9 @@ html{ scrollbar-gutter:stable; }
 .idcard-logo{ width:68px; height:68px; object-fit:contain; border-radius:0; box-shadow:none;
   filter:drop-shadow(0 4px 8px rgba(31,58,61,.25)); }
 .intro-logo{ border-radius:0; }
+
+
+/* ============================================================
+   PEMBARUAN D: aspirasi tersembunyi (v3.8)
+   ============================================================ */
+.card.is-hidden{ opacity:.65; }
