@@ -238,8 +238,9 @@ async function loadListUmumPage(offset, append){
   state.listUmum.loading = true;
   const my = state.listUmum.seq = (state.listUmum.seq | 0) + 1;
   const fq = state.filter !== 'all' ? '&status=eq.' + encodeURIComponent(state.filter) : '';
+  const hiddenCol = state.admin.active ? ',hidden' : '';
 
-  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id&event_id=is.null${fq}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
+  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id${hiddenCol}&event_id=is.null${fq}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
   if (my !== state.listUmum.seq) return; // ada permintaan yang lebih baru (mis. filter diganti)
 
@@ -281,7 +282,8 @@ async function loadListEventPage(eventId, offset, append){
   bucket.loading = true;
   if (!bucket.items.length) renderEventBody(eventId); // tampilkan skeleton selama memuat
 
-  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id&event_id=eq.${eventId}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
+  const hiddenCol = state.admin.active ? ',hidden' : '';
+  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id${hiddenCol}&event_id=eq.${eventId}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
   if (r.ok && Array.isArray(r.data)){
     const rows = r.data.slice(0, 20);
@@ -879,6 +881,25 @@ function buildCard(a, reveal){
     del.innerHTML = '<span class="glow"></span>Hapus';
     del.addEventListener('click', () => onDeleteAspirasi(a, card));
     foot.appendChild(del);
+
+    const hideBtn = document.createElement('button');
+    hideBtn.type = 'button';
+    hideBtn.className = 'tombol netral kecil';
+    hideBtn.innerHTML = '<span class="glow"></span>' + (a.hidden ? 'Tampilkan' : 'Sembunyikan');
+    hideBtn.addEventListener('click', () => onToggleHidden(a, card));
+    foot.appendChild(hideBtn);
+
+    // Lencana "Disembunyikan" (hanya admin yang lihat)
+    if (a.hidden) {
+      const badge = document.createElement('span');
+      badge.className = 'pill';
+      badge.style.background = 'rgba(120,130,140,.24)';
+      badge.style.borderColor = 'rgba(120,130,140,.4)';
+      badge.style.color = '#4E5A60';
+      badge.textContent = 'Disembunyikan';
+      top.appendChild(badge);
+      card.classList.add('is-hidden');
+    }
   }
 
   card.appendChild(top);
@@ -955,6 +976,46 @@ async function onStatusChange(a, sel){
   const vb = card && card.querySelector('.vote-btn');
   if (vb){ vb.disabled = next === 'Ditolak'; vb.title = vb.disabled ? 'Aspirasi yang ditolak tidak bisa didukung' : ''; }
   toast('Status diperbarui');
+}
+
+async function onToggleHidden(a, card){
+  const next = !a.hidden;
+  const r = await api('/rest/v1/rpc/admin_set_hidden', {
+    method: 'POST',
+    body: { p_id: a.id, p_hidden: next }
+  });
+  if (!r.ok){
+    toast(r.error || 'Gagal mengubah visibilitas', { err: true });
+    return;
+  }
+  a.hidden = next;
+  // Update tombol label
+  const btns = card.querySelectorAll('button.tombol.netral.kecil');
+  const hideBtn = btns[btns.length - 1]; // tombol terakhir adalah hide/show
+  if (hideBtn){
+    hideBtn.replaceChildren();
+    const glow = document.createElement('span');
+    glow.className = 'glow';
+    hideBtn.appendChild(glow);
+    hideBtn.appendChild(document.createTextNode(next ? 'Tampilkan' : 'Sembunyikan'));
+  }
+  // Update lencana & class
+  const top = card.querySelector('.card-top');
+  if (next){
+    const badge = document.createElement('span');
+    badge.className = 'pill';
+    badge.style.background = 'rgba(120,130,140,.24)';
+    badge.style.borderColor = 'rgba(120,130,140,.4)';
+    badge.style.color = '#4E5A60';
+    badge.textContent = 'Disembunyikan';
+    top.appendChild(badge);
+    card.classList.add('is-hidden');
+  } else {
+    const badges = top.querySelectorAll('.pill');
+    badges.forEach(b => { if (b.textContent === 'Disembunyikan') b.remove(); });
+    card.classList.remove('is-hidden');
+  }
+  toast(next ? 'Aspirasi disembunyikan' : 'Aspirasi ditampilkan');
 }
 
 /* ============================================================
