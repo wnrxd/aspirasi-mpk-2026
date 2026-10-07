@@ -10,9 +10,7 @@
 <script>
   try {
     var mpkTheme = localStorage.getItem('mpk_v3_theme') || 'light';
-    document.documentElement.setAttribute('data-theme', mpkTheme === 'auto'
-      ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : mpkTheme);
+    document.documentElement.setAttribute('data-theme', mpkTheme === 'dark' ? 'dark' : 'light');
   } catch (_) {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
