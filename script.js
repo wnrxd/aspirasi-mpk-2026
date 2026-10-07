@@ -71,7 +71,7 @@ const state = {
   lite: false,
   liteManual: null,
   muted: safeGet('mpk_v3_muted') === '1',
-  theme: safeGet('mpk_v3_theme') || 'light', // light, dark, auto
+  theme: safeGet('mpk_v3_theme') === 'dark' ? 'dark' : 'light',
   admin: { active: false, token: null, refresh: null, expiresAt: 0 },
   events: [],
   eventsLoaded: false,
@@ -1742,27 +1742,17 @@ function initSettings(){
   const tglTheme = $('#tglTheme');
   const themeDesc = $('#themeDesc');
   function applyTheme(){
-    const effective = state.theme === 'auto'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : state.theme;
-    document.documentElement.setAttribute('data-theme', effective);
-    const labels = { light: 'Terang', dark: 'Gelap', auto: 'Otomatis' };
+    document.documentElement.setAttribute('data-theme', state.theme);
+    const labels = { light: 'Terang', dark: 'Gelap' };
     themeDesc.textContent = labels[state.theme] || 'Terang';
   }
 
   tglTheme.addEventListener('click', () => {
-    const modes = ['light', 'dark', 'auto'];
-    const idx = modes.indexOf(state.theme);
-    state.theme = modes[(idx + 1) % modes.length];
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
     safeSet('mpk_v3_theme', state.theme);
     applyTheme();
   });
   applyTheme();
-
-  // listen to system theme changes if auto
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if (state.theme === 'auto') applyTheme();
-  });
 }
 
 function detectLite(){
