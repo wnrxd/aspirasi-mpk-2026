@@ -1859,6 +1859,7 @@ body.lite .corner-logo{
   opacity: 0.65;
   transform: scale(0.995);
 }
+.kosong[hidden]{ display:none; }
 
 .pill.badge-out{ animation:badge-out .25s ease forwards; }
 @keyframes badge-out{ to{ opacity:0; transform:scale(.85); } }
