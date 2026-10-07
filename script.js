@@ -1,4 +1,4 @@
-/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js
+/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js — v3.9.1
    Tanpa library. fetch langsung ke Supabase (PostgREST + GoTrue). */
 (() => {
 'use strict';
@@ -99,18 +99,18 @@ const state = {
 const toastWrap = $('#toastWrap');
 function toast(msg, opts = {}){
   // Pesan yang sama tidak ditumpuk: cukup satu toast aktif
-  for (const t of toastWrap.children){ 
+  for (const t of toastWrap.children){
     const txt = t.querySelector('.toast-msg');
-    if (txt && txt.textContent === msg && !t.classList.contains('out')) return; 
+    if (txt && txt.textContent === msg && !t.classList.contains('out')) return;
   }
   const el = document.createElement('div');
   el.className = 'toast' + (opts.err ? ' err' : '');
-  
+
   const msgEl = document.createElement('span');
   msgEl.className = 'toast-msg';
   msgEl.textContent = msg;
   el.appendChild(msgEl);
-  
+
   const closeBtn = document.createElement('button');
   closeBtn.className = 'toast-close';
   closeBtn.setAttribute('aria-label', 'Tutup notifikasi');
@@ -120,7 +120,7 @@ function toast(msg, opts = {}){
     setTimeout(() => el.remove(), 400);
   });
   el.appendChild(closeBtn);
-  
+
   toastWrap.appendChild(el);
   while (toastWrap.children.length > 3) toastWrap.firstChild.remove();
   const ttl = opts.ttl || 3400;
@@ -209,6 +209,14 @@ function cacheGet(key){
     const obj = JSON.parse(raw);
     return obj && typeof obj === 'object' ? obj.v : null;
   } catch(_) { return null; }
+}
+
+function clearAspirasiCaches(){
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key === K.listU || key.startsWith('mpk_v32_list_event_')) localStorage.removeItem(key);
+    });
+  } catch(_) {}
 }
 
 /* ============================================================
@@ -638,7 +646,7 @@ function updateEventGate(){
 function setTab(tab, opts = {}){
   if (!TABS.includes(tab)) tab = 'beranda';
   if (state.tabBusy) return;
-  if (tab === state.tab){ 
+  if (tab === state.tab){
     syncTabs();
     return;
   }
@@ -827,7 +835,7 @@ function renderListUmum(){
   if (!items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    
+
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     icon.setAttribute('class', 'kosong-icon');
     icon.setAttribute('aria-hidden', 'true');
@@ -835,13 +843,13 @@ function renderListUmum(){
     use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#icon-empty-inbox');
     icon.appendChild(use);
     k.appendChild(icon);
-    
+
     const text = document.createElement('span');
     text.textContent = state.filter === 'all'
       ? 'Belum ada aspirasi. Jadilah yang pertama mengirim!'
       : 'Belum ada aspirasi dengan status ' + state.filter + '.';
     k.appendChild(text);
-    
+
     el.appendChild(k);
     $('#listHitung').textContent = '0 aspirasi';
     $('#btnMuat').hidden = true;
@@ -1020,15 +1028,18 @@ async function onToggleHidden(a, card){
     return;
   }
   a.hidden = next;
+  clearAspirasiCaches();
   // Update tombol label
   const btns = card.querySelectorAll('button.tombol.netral.kecil');
   const hideBtn = btns[btns.length - 1]; // tombol terakhir adalah hide/show
   if (hideBtn){
+    hideBtn.classList.add('label-changing');
     hideBtn.replaceChildren();
     const glow = document.createElement('span');
     glow.className = 'glow';
     hideBtn.appendChild(glow);
     hideBtn.appendChild(document.createTextNode(next ? 'Tampilkan' : 'Sembunyikan'));
+    requestAnimationFrame(() => hideBtn.classList.remove('label-changing'));
   }
   // Update lencana & class
   const top = card.querySelector('.card-top');
@@ -1043,7 +1054,11 @@ async function onToggleHidden(a, card){
     card.classList.add('is-hidden');
   } else {
     const badges = top.querySelectorAll('.pill');
-    badges.forEach(b => { if (b.textContent === 'Disembunyikan') b.remove(); });
+    badges.forEach(b => {
+      if (b.textContent !== 'Disembunyikan') return;
+      b.classList.add('badge-out');
+      setTimeout(() => b.remove(), 250);
+    });
     card.classList.remove('is-hidden');
   }
   toast(next ? 'Aspirasi disembunyikan' : 'Aspirasi ditampilkan');
@@ -1141,7 +1156,7 @@ async function submitAspirasi(ta, cnt, btn, eventId){
 
   ta.value = '';
   if (cnt) cnt.textContent = '1000 karakter tersisa';
-  
+
   // Cek jika aspirasi di-moderate (auto-hidden)
   if (r.data && r.data.moderated){
     toast(r.data.message || 'Aspirasi terkirim dan sedang ditinjau pengurus MPK');
@@ -1372,23 +1387,7 @@ function renderEventBody(eventId){
       cnt.textContent = sisa + ' karakter tersisa';
       cnt.classList.toggle('hampir', sisa <= 80);
     });
-    kirim.addEventListener('click', async () => {
-      const isi = ta.value.trim();
-      if (!isi){ toast('Tulis aspirasimu dulu ya', { err: true }); ta.focus(); return; }
-      kirim.disabled = true;
-      const r = await api('/rest/v1/rpc/submit_aspirasi', {
-        method: 'POST',
-        body: { p_client_id: state.clientId, p_isi: isi, p_event_id: eventId }
-      });
-      kirim.disabled = false;
-      if (!r.ok){ toast(r.error || 'Gagal mengirim aspirasi', { err: true }); return; }
-      ta.value = '';
-      cnt.textContent = '1000 karakter tersisa';
-      toast('Aspirasi event terkirim!');
-      confettiBurst();
-      b.offset = 0;
-      await loadListEventPage(eventId, 0, false);
-    });
+    kirim.addEventListener('click', () => submitAspirasi(ta, cnt, kirim, eventId));
   }
 
   // daftar aspirasi event
@@ -1402,7 +1401,7 @@ function renderEventBody(eventId){
   } else if (!b.items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    
+
     if (!b.error){
       const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       icon.setAttribute('class', 'kosong-icon');
@@ -1412,13 +1411,13 @@ function renderEventBody(eventId){
       icon.appendChild(use);
       k.appendChild(icon);
     }
-    
+
     const text = document.createElement('span');
     text.textContent = b.error
       ? 'Aspirasi belum bisa dimuat. Tutup lalu buka lagi event ini.'
       : (ev.locked ? 'Belum ada aspirasi di event ini.' : 'Belum ada aspirasi di sini. Jadilah yang pertama!');
     k.appendChild(text);
-    
+
     list.appendChild(k);
   } else {
     b.items.forEach((a, i) => list.appendChild(buildCard(a, i < 3)));
@@ -1616,6 +1615,7 @@ function forceAdminLogout(msg){
   state.admin.token = null;
   state.admin.refresh = null;
   state.admin.expiresAt = 0;
+  clearAspirasiCaches();
   if (state.refreshTimer) clearTimeout(state.refreshTimer);
   state.refreshTimer = null;
   updateAdminUI();
@@ -1742,14 +1742,14 @@ function initSettings(){
   const tglTheme = $('#tglTheme');
   const themeDesc = $('#themeDesc');
   function applyTheme(){
-    const effective = state.theme === 'auto' 
+    const effective = state.theme === 'auto'
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : state.theme;
     document.documentElement.setAttribute('data-theme', effective);
     const labels = { light: 'Terang', dark: 'Gelap', auto: 'Otomatis' };
     themeDesc.textContent = labels[state.theme] || 'Terang';
   }
-  
+
   tglTheme.addEventListener('click', () => {
     const modes = ['light', 'dark', 'auto'];
     const idx = modes.indexOf(state.theme);
@@ -1758,7 +1758,7 @@ function initSettings(){
     applyTheme();
   });
   applyTheme();
-  
+
   // listen to system theme changes if auto
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (state.theme === 'auto') applyTheme();
@@ -1884,7 +1884,7 @@ function initGlassShine(){
     el.style.setProperty('--x', ((e.clientX - r.left) / r.width * 100) + '%');
     el.style.setProperty('--y', ((e.clientY - r.top) / r.height * 100) + '%');
     litOne(el);
-    
+
     // Add ripple effect
     const rippleTarget = e.target.closest('.tombol, .chip, .vote-btn, .tab, .event-toggle');
     if (rippleTarget && !rippleTarget.disabled){
