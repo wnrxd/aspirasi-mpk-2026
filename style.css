@@ -1562,3 +1562,464 @@ body.lite .ripple{
 body.lite .corner-logo{
   animation: none;
 }
+/* ============================================================
+   PEMBARUAN E.1: v3.9.1 - Dark Mode UI Fixes + Smooth Animations
+   ============================================================ */
+
+/* Dark Mode: Tombol - Kuning lebih pekat dengan shadow kuat */
+[data-theme="dark"] .tombol{
+  background: linear-gradient(150deg, #F5C842, #D6A614);
+  color: #1F3A3D;
+  box-shadow: 0 8px 20px rgba(245,200,66,.45), inset 0 1px 0 rgba(255,255,255,.6);
+}
+
+[data-theme="dark"] .tombol.biru{
+  background: linear-gradient(150deg, #5DAFFF, #2F9BF4);
+  color: #0A1F2E;
+  box-shadow: 0 8px 20px rgba(93,175,255,.45), inset 0 1px 0 rgba(255,255,255,.35);
+}
+
+[data-theme="dark"] .tombol.netral{
+  background: linear-gradient(150deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+  color: #EAF4F6;
+  border: 1px solid rgba(255,255,255,.25);
+  box-shadow: var(--bayang-2), inset 0 1px 0 rgba(255,255,255,.2);
+}
+
+[data-theme="dark"] .tombol.bahaya{
+  background: linear-gradient(150deg, #E88379, #D96A5E);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(232,131,121,.4), inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+/* Dark Mode: Pills (Status badges) */
+[data-theme="dark"] .pill-hold{ 
+  background: rgba(245,200,66,.28); 
+  border-color: rgba(245,200,66,.45); 
+  color: #F5C842; 
+  font-weight: 700;
+}
+
+[data-theme="dark"] .pill-diproses{ 
+  background: rgba(93,175,255,.28); 
+  border-color: rgba(93,175,255,.45); 
+  color: #5DAFFF; 
+  font-weight: 700;
+}
+
+[data-theme="dark"] .pill-selesai{ 
+  background: rgba(63,184,113,.28); 
+  border-color: rgba(63,184,113,.45); 
+  color: #5BC98A; 
+  font-weight: 700;
+}
+
+[data-theme="dark"] .pill-ditolak{ 
+  background: rgba(232,131,121,.28); 
+  border-color: rgba(232,131,121,.45); 
+  color: #E88379; 
+  font-weight: 700;
+}
+
+[data-theme="dark"] .pill-open{ 
+  background: rgba(63,184,113,.28); 
+  border-color: rgba(63,184,113,.45); 
+  color: #5BC98A; 
+  font-weight: 700;
+}
+
+[data-theme="dark"] .pill-locked{ 
+  background: rgba(177,188,196,.24); 
+  border-color: rgba(177,188,196,.4); 
+  color: #B1BCC4; 
+  font-weight: 700;
+}
+
+/* Dark Mode: Vote button */
+[data-theme="dark"] .vote-btn{
+  border: 1px solid rgba(93,175,255,.45);
+  background: rgba(93,175,255,.22);
+  color: #5DAFFF;
+}
+
+[data-theme="dark"] .vote-btn.voted{
+  background: linear-gradient(150deg, #5DAFFF, #2F9BF4);
+  color: #0A1F2E;
+  border-color: transparent;
+}
+
+[data-theme="dark"] .vote-btn:disabled{
+  opacity: 0.4;
+  border-color: rgba(177,188,196,.3);
+  background: rgba(177,188,196,.15);
+  color: #89A3A9;
+}
+
+/* Dark Mode: Chips (Filter) */
+[data-theme="dark"] .chip{
+  border: 1px solid rgba(255,255,255,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  color: #EAF4F6;
+}
+
+[data-theme="dark"] .chip.on{
+  background: linear-gradient(150deg, #2F9BF4, #1E7FD1);
+  border-color: transparent;
+  color: #fff;
+}
+
+[data-theme="dark"] .chip-count{
+  background: rgba(93,175,255,.35);
+  color: #5DAFFF;
+}
+
+[data-theme="dark"] .chip.on .chip-count{
+  background: rgba(255,255,255,.3);
+  color: #fff;
+}
+
+/* Dark Mode: Segmented control */
+[data-theme="dark"] .segmented{
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  border: 1px solid rgba(255,255,255,.22);
+}
+
+[data-theme="dark"] .segmented .seg-indicator{
+  background: linear-gradient(150deg, rgba(255,255,255,.22), rgba(255,255,255,.12));
+  box-shadow: 0 4px 14px rgba(93,175,255,.25), inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+[data-theme="dark"] .segmented button{
+  color: #B7CDD2;
+}
+
+[data-theme="dark"] .segmented button[aria-selected="true"]{
+  color: #EAF4F6;
+}
+
+/* Dark Mode: Tab navigation */
+[data-theme="dark"] .tabnav{
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  border: 1px solid rgba(255,255,255,.22);
+}
+
+[data-theme="dark"] .tabnav .tab-indicator{
+  background: linear-gradient(150deg, rgba(255,255,255,.22), rgba(255,255,255,.12));
+  box-shadow: 0 5px 16px rgba(93,175,255,.28), inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+[data-theme="dark"] .tabnav .tab{
+  color: #B7CDD2;
+}
+
+[data-theme="dark"] .tabnav .tab[aria-selected="true"]{
+  color: #EAF4F6;
+}
+
+[data-theme="dark"] .tabnav .tab.locked{
+  color: #7A9095;
+}
+
+/* Dark Mode: Settings button */
+[data-theme="dark"] .settings-btn{
+  background: linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+  border: 1px solid rgba(255,255,255,.22);
+}
+
+[data-theme="dark"] .settings-btn.admin{
+  background: linear-gradient(150deg, #3FB871, #2E8A54);
+  color: #fff;
+}
+
+/* Dark Mode: Toggle switch */
+[data-theme="dark"] .toggle{
+  background: rgba(120,140,150,.35);
+  border-color: rgba(255,255,255,.18);
+}
+
+[data-theme="dark"] .toggle.on{
+  background: #2F9BF4;
+}
+
+/* Dark Mode: Event toggle button */
+[data-theme="dark"] .event-toggle{
+  border: 1px solid rgba(93,175,255,.4);
+  background: rgba(93,175,255,.18);
+  color: #5DAFFF;
+}
+
+/* Dark Mode: ID Card */
+[data-theme="dark"] .lanyard-string{
+  background: linear-gradient(180deg, rgba(93,175,255,.45), rgba(93,175,255,.75));
+  box-shadow: 0 2px 6px rgba(93,175,255,.3);
+}
+
+/* Dark Mode: Catatan anonim */
+[data-theme="dark"] .catatan-anonim{
+  background: rgba(63,184,113,.18);
+  border-color: rgba(63,184,113,.35);
+  color: #B7CDD2;
+}
+
+/* Dark Mode: Inline rename */
+[data-theme="dark"] .inline-rename input{
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.22);
+  color: #EAF4F6;
+}
+
+[data-theme="dark"] .inline-rename input::placeholder{
+  color: #89A3A9;
+}
+
+/* Dark Mode: Anon box */
+[data-theme="dark"] .anon-box{
+  background: linear-gradient(150deg, rgba(93,175,255,.18), rgba(63,184,113,.16));
+  border-color: rgba(93,175,255,.28);
+}
+
+/* Dark Mode: Status baris */
+[data-theme="dark"] .status-baris{
+  border-bottom-color: rgba(255,255,255,.15);
+}
+
+/* Dark Mode: Langkah */
+[data-theme="dark"] .langkah{
+  border-bottom-color: rgba(255,255,255,.15);
+}
+
+[data-theme="dark"] .langkah-ikon{
+  color: #5DAFFF;
+}
+
+[data-theme="dark"] .langkah-num{
+  background: linear-gradient(150deg, #5DAFFF, #2F9BF4);
+  color: #0A1F2E;
+}
+
+/* Dark Mode: Admin baris */
+[data-theme="dark"] .admin-baris{
+  border-top-color: rgba(255,255,255,.2);
+}
+
+/* Dark Mode: Skeleton shimmer */
+[data-theme="dark"] .sk{
+  background: linear-gradient(100deg, 
+    rgba(255,255,255,.08) 30%, 
+    rgba(255,255,255,.14) 50%, 
+    rgba(255,255,255,.08) 70%);
+  border-color: rgba(255,255,255,.12);
+}
+
+/* Dark Mode: Event card locked overlay */
+[data-theme="dark"] .event-card.is-locked{
+  background-image: linear-gradient(rgba(20,30,38,.6), rgba(20,30,38,.6)), var(--kaca-isi);
+}
+
+/* ============================================================
+   SMOOTH ANIMATIONS: State Changes
+   ============================================================ */
+
+/* Badge muncul/hilang dengan fade + scale */
+.pill{
+  animation: badge-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes badge-in{
+  from{
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to{
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Tombol label change dengan crossfade */
+.tombol,
+.vote-btn,
+.event-toggle{
+  transition: all 0.2s ease;
+}
+
+.tombol *,
+.vote-btn *,
+.event-toggle *{
+  transition: opacity 0.2s ease;
+}
+
+/* Card hidden state smooth transition */
+.card{
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card.is-hidden{
+  opacity: 0.65;
+  transform: scale(0.995);
+}
+
+/* Chip state change smooth */
+.chip{
+  transition: background-color 0.25s ease, 
+              color 0.25s ease, 
+              border-color 0.25s ease,
+              transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Status select change smooth */
+.status-select{
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Empty state fade in */
+.kosong{
+  animation: empty-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes empty-in{
+  from{
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.kosong-icon{
+  animation: icon-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+@keyframes icon-in{
+  from{
+    opacity: 0;
+    transform: scale(0.7) rotate(-5deg);
+  }
+  to{
+    opacity: 0.4;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Tab indicator smooth movement (already exists, ensure it's smooth) */
+.tab-indicator,
+.seg-indicator{
+  transition: transform 0.42s cubic-bezier(0.22, 1.3, 0.36, 1), 
+              width 0.42s cubic-bezier(0.22, 1.3, 0.36, 1);
+}
+
+/* Filter effect smooth */
+.list{
+  transition: opacity 0.2s ease;
+}
+
+/* Vote number bump (already exists, keep it) */
+.vote-num.bump{
+  animation: bump 0.38s cubic-bezier(0.22, 1.4, 0.4, 1);
+}
+
+/* Settings button admin state smooth */
+.settings-btn{
+  transition: background 0.3s ease, color 0.3s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Modal smooth appearance (already exists, keep it) */
+.modal-back{
+  animation: modalIn 0.28s ease both;
+}
+
+.modal{
+  animation: modalPop 0.4s cubic-bezier(0.22, 1.3, 0.36, 1) both;
+}
+
+/* Toast smooth (already exists but ensure stacking is smooth) */
+.toast{
+  animation: toastIn 0.38s cubic-bezier(0.22, 1.3, 0.36, 1) both;
+}
+
+.toast.out{
+  animation: toastOut 0.35s ease forwards;
+}
+
+/* Admin badge smooth pulse (already exists, keep it) */
+.settings-btn.admin::after{
+  animation: admin-pulse 2s ease-in-out infinite;
+}
+
+/* Penghitung character count smooth color change */
+.penghitung{
+  transition: color 0.3s ease, font-weight 0.3s ease;
+}
+
+/* Input focus smooth */
+textarea,
+input[type="text"],
+input[type="password"]{
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.3s ease;
+}
+
+/* Offline bar smooth appearance */
+.offline-bar{
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.offline-bar.tampil{
+  animation: slide-down 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes slide-down{
+  from{
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Event body smooth expand (already exists via grid, keep it) */
+.event-body{
+  transition: grid-template-rows 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.eb-in{
+  transition: opacity 0.25s ease;
+}
+
+/* Progress bar smooth */
+.progress{
+  transition: transform 0.2s ease;
+}
+
+/* Ensure all interactive elements have smooth hover transitions */
+@media (hover: hover){
+  .tombol,
+  .chip,
+  .vote-btn,
+  .tab,
+  .event-toggle,
+  .toggle,
+  .settings-btn{
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                background 0.25s ease,
+                box-shadow 0.18s ease,
+                opacity 0.2s ease;
+  }
+}
+
+/* Respect reduced motion - disable complex animations */
+@media (prefers-reduced-motion: reduce){
+  .pill,
+  .kosong,
+  .kosong-icon,
+  .offline-bar{
+    animation: none !important;
+  }
+  
+  .card.is-hidden{
+    transform: none;
+  }
+}
