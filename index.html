@@ -38,6 +38,14 @@
     <feTurbulence type="fractalNoise" baseFrequency="0.008 0.010" numOctaves="2" seed="7" result="noise"/>
     <feDisplacementMap in="SourceGraphic" in2="noise" scale="14" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
+  
+  <!-- Empty state icon: Inbox -->
+  <symbol id="icon-empty-inbox" viewBox="0 0 64 64">
+    <rect x="8" y="16" width="48" height="36" rx="4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M8 24 L32 40 L56 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="8" y1="16" x2="32" y2="32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="56" y1="16" x2="32" y2="32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  </symbol>
 </svg>
 
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -306,6 +314,17 @@
         <div class="sr-desc" id="muteDesc">Aktif</div>
       </div>
       <button class="toggle on" id="tglMute" role="switch" aria-checked="true" aria-label="Suara"></button>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="sr-label">Tema</div>
+        <div class="sr-desc" id="themeDesc">Terang</div>
+      </div>
+      <button class="tombol netral kecil" id="tglTheme">
+        <span class="glow" aria-hidden="true"></span>
+        Ganti
+      </button>
     </div>
 
     <div class="modal-actions">
