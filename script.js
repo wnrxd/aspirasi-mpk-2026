@@ -53,6 +53,19 @@ function markVoted(id){
   const arr = getVotedIds();
   if (!arr.includes(id)) { arr.push(id); setVotedIds(arr); }
 }
+function unmarkVoted(id){
+  setVotedIds(getVotedIds().filter(x => x !== id));
+}
+
+async function syncVotedIds(){
+  const r = await api('/rest/v1/rpc/get_voted_aspirasi', {
+    method: 'POST',
+    body: { p_client_id: state.clientId }
+  });
+  if (!r.ok || !Array.isArray(r.data)) return;
+  state.voted = r.data.filter(id => typeof id === 'string');
+  setVotedIds(state.voted);
+}
 
 const dfID = new Intl.DateTimeFormat('id-ID', { day:'numeric', month:'short', year:'numeric' });
 
@@ -888,7 +901,7 @@ function buildCard(a, reveal){
   const vbtn = document.createElement('button');
   vbtn.className = 'vote-btn' + (state.voted.includes(a.id) ? ' voted' : '');
   vbtn.type = 'button';
-  vbtn.setAttribute('aria-label', 'Dukung aspirasi ini');
+  vbtn.setAttribute('aria-label', state.voted.includes(a.id) ? 'Batalkan dukungan' : 'Dukung aspirasi ini');
   const arrow = document.createElement('span'); arrow.textContent = '▲';
   const num = document.createElement('span');
   num.className = 'vote-num';
@@ -957,13 +970,12 @@ async function onVote(a, btn, numEl){
   const before = a.votes | 0;
   const already = state.voted.includes(a.id);
 
-  // optimistic
-  if (!already){
-    a.votes = before + 1;
-    numEl.textContent = String(a.votes);
-    numEl.classList.remove('bump'); void numEl.offsetWidth; numEl.classList.add('bump');
-    btn.classList.add('voted');
-  }
+  // Optimistic toggle: klik kedua membatalkan dukungan.
+  a.votes = Math.max(0, before + (already ? -1 : 1));
+  numEl.textContent = String(a.votes);
+  numEl.classList.remove('bump'); void numEl.offsetWidth; numEl.classList.add('bump');
+  btn.classList.toggle('voted', !already);
+  btn.setAttribute('aria-label', already ? 'Dukung aspirasi ini' : 'Batalkan dukungan');
 
   const r = await api('/rest/v1/rpc/vote_aspirasi', {
     method: 'POST',
@@ -972,24 +984,22 @@ async function onVote(a, btn, numEl){
 
   if (!r.ok){
     toast(r.error || 'Gagal mengirim dukungan', { err: true });
-    // rollback
-    if (!already){
-      a.votes = before;
-      numEl.textContent = String(before);
-      btn.classList.remove('voted');
-    }
+    a.votes = before;
+    numEl.textContent = String(before);
+    btn.classList.toggle('voted', already);
+    btn.setAttribute('aria-label', already ? 'Batalkan dukungan' : 'Dukung aspirasi ini');
   } else if (r.data && r.data.success){
     a.votes = r.data.votes | 0;
     numEl.textContent = String(a.votes);
-    if (r.data.already){
+    if (r.data.voted){
       markVoted(a.id);
-      state.voted = getVotedIds();
       btn.classList.add('voted');
     } else {
-      markVoted(a.id);
-      state.voted = getVotedIds();
-      btn.classList.add('voted');
+      unmarkVoted(a.id);
+      btn.classList.remove('voted');
     }
+    state.voted = getVotedIds();
+    btn.setAttribute('aria-label', r.data.voted ? 'Batalkan dukungan' : 'Dukung aspirasi ini');
   }
   btn.dataset.busy = '0';
 }
@@ -1970,9 +1980,10 @@ function initScrollEffects(){
 /* ============================================================
    PREFETCH
    ============================================================ */
-function prefetchAll(){
+async function prefetchAll(){
   // jalankan paralel, tanpa menunggu intro
   // allSettled: satu request gagal tidak boleh menggagalkan yang lain
+  await syncVotedIds();
   Promise.allSettled([loadStats(), loadEvents(), loadListUmumPage(0, false)]);
 }
 
