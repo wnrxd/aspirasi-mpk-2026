@@ -1208,3 +1208,357 @@ html{ scrollbar-gutter:stable; }
    PEMBARUAN D: aspirasi tersembunyi (v3.8)
    ============================================================ */
 .card.is-hidden{ opacity:.65; }
+/* ============================================================
+   PEMBARUAN E: v3.9 - Dark Mode + UI Enhancements
+   ============================================================ */
+
+/* Dark Mode Variables */
+[data-theme="dark"]{
+  --krem:#0E1B22;
+  --teks:#EAF4F6;
+  --teks-lembut:#B7CDD2;
+  --teks-samar:#89A3A9;
+  --kaca-isi: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+  --kaca-border: rgba(255,255,255,.22);
+  --kaca-inset: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(255,255,255,.05);
+  --bayang-1: 0 14px 34px rgba(0,0,0,.45);
+  --bayang-2: 0 2px 8px rgba(0,0,0,.3);
+}
+
+[data-theme="dark"] body{
+  background-image:
+    radial-gradient(1100px 680px at 8% -12%, rgba(47,155,244,.30), transparent 62%),
+    radial-gradient(900px 620px at 102% -6%, rgba(255,210,63,.16), transparent 58%),
+    radial-gradient(1000px 760px at 50% 118%, rgba(63,184,113,.20), transparent 62%),
+    radial-gradient(760px 560px at 92% 76%, rgba(240,138,114,.14), transparent 62%);
+}
+
+[data-theme="dark"] .kaca-ringan{
+  background:linear-gradient(150deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+  border-color:rgba(255,255,255,.14);
+  box-shadow: var(--bayang-2), inset 0 1px 0 rgba(255,255,255,.14);
+}
+
+[data-theme="dark"] .doodles .dw{ color:#CFE7EC; opacity:.14; }
+
+[data-theme="dark"] .intro{
+  background:
+    radial-gradient(900px 600px at 50% 30%, rgba(47,155,244,.45), transparent 65%),
+    radial-gradient(700px 500px at 80% 90%, rgba(255,210,63,.28), transparent 65%),
+    #0E2230;
+}
+
+[data-theme="dark"] .idcard{ background:linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.05)); }
+[data-theme="dark"] .idcard::before{ background:linear-gradient(150deg, rgba(255,255,255,.18), rgba(255,255,255,.08)); }
+[data-theme="dark"] .idcard-text{ color:#fff; }
+[data-theme="dark"] .idcard-sub{ color:#B7CDD2; }
+
+[data-theme="dark"] .hero-title{ color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.3); }
+[data-theme="dark"] .panel-judul{ color:#fff; }
+[data-theme="dark"] .event-nama{ color:#fff; }
+[data-theme="dark"] h3{ color:#fff; }
+
+[data-theme="dark"] textarea{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.18);
+  color:#EAF4F6;
+}
+
+[data-theme="dark"] textarea::placeholder{
+  color:#89A3A9;
+}
+
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="password"]{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.18);
+  color:#EAF4F6;
+}
+
+[data-theme="dark"] .card{
+  background:linear-gradient(150deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+  border-color:rgba(255,255,255,.16);
+}
+
+[data-theme="dark"] .status-select{
+  background:rgba(255,255,255,.10);
+  border-color:rgba(255,255,255,.18);
+  color:#EAF4F6;
+}
+
+[data-theme="dark"] .kosong{
+  border-color:rgba(255,255,255,.22);
+  color:#B7CDD2;
+}
+
+[data-theme="dark"] .offline-bar{
+  background:rgba(255,210,63,.18);
+  border-color:rgba(214,166,20,.35);
+  color:#FFD23F;
+}
+
+[data-theme="dark"] .event-locked-note{
+  background:rgba(120,130,140,.10);
+  border-color:rgba(120,130,140,.20);
+}
+
+[data-theme="dark"] .modal h2{ color:#fff; }
+
+[data-theme="dark"] .langkah h3{ color:#fff; }
+[data-theme="dark"] .status-arti h3{ color:#fff; }
+[data-theme="dark"] .anon-box h3{ color:#fff; }
+
+/* Smooth theme transition */
+html{
+  transition: background-color 0.3s ease;
+}
+
+body, .glass, .kaca-ringan, .card, textarea, input, .kosong, .modal{
+  transition: background-color 0.3s ease, background-image 0.3s ease, 
+              border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Disable tap highlight & add custom selection */
+button, a, .tab, .chip, .card, .tombol, .vote-btn, .event-toggle, .toggle{
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+p, .card-isi, textarea, input, .panel-desk{
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+::selection{
+  background: rgba(47,155,244,0.3);
+  color: inherit;
+}
+
+[data-theme="dark"] ::selection{
+  background: rgba(47,155,244,0.4);
+}
+
+/* Scale down on tap/active */
+.tombol:active,
+.chip:active,
+.vote-btn:active,
+.tab:active,
+.event-toggle:active,
+.settings-btn:active{
+  transform: scale(0.96);
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:active{
+  transform: scale(0.995);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ripple effect */
+.ripple{
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transform: scale(0);
+  animation: ripple-anim 0.6s ease-out;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .ripple{
+  background: rgba(255,255,255,0.15);
+}
+
+@keyframes ripple-anim{
+  to{
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Toast improvements */
+.toast{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px 13px 20px;
+}
+
+.toast-msg{
+  flex: 1;
+}
+
+.toast-close{
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(31,58,61,0.12);
+  color: var(--teks);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.toast-close:hover{
+  background: rgba(31,58,61,0.2);
+}
+
+.toast-close:active{
+  transform: scale(0.9);
+}
+
+[data-theme="dark"] .toast-close{
+  background: rgba(255,255,255,0.12);
+}
+
+[data-theme="dark"] .toast-close:hover{
+  background: rgba(255,255,255,0.2);
+}
+
+/* Enhanced glass depth blur */
+.modal .glass{
+  backdrop-filter: blur(22px) saturate(1.8);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+}
+
+.tabnav.glass{
+  backdrop-filter: blur(20px) saturate(1.85);
+  -webkit-backdrop-filter: blur(20px) saturate(1.85);
+}
+
+.card.glass{
+  backdrop-filter: blur(16px) saturate(1.7);
+  -webkit-backdrop-filter: blur(16px) saturate(1.7);
+}
+
+/* Corner logo float animation */
+.corner-logo{
+  animation: logo-float 3s ease-in-out infinite;
+}
+
+@keyframes logo-float{
+  0%, 100%{ transform: translateY(0); }
+  50%{ transform: translateY(-4px); }
+}
+
+/* Admin mode indicator */
+.settings-btn.admin::after{
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3FB871, #2E8A54);
+  box-shadow: 0 0 0 3px var(--krem), 0 0 8px rgba(63,184,113,0.6);
+  animation: admin-pulse 2s ease-in-out infinite;
+}
+
+@keyframes admin-pulse{
+  0%, 100%{ transform: scale(1); opacity: 1; }
+  50%{ transform: scale(1.15); opacity: 0.8; }
+}
+
+/* Empty state illustration */
+.kosong{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.kosong-icon{
+  width: 80px;
+  height: 80px;
+  opacity: 0.4;
+  color: var(--teks-samar);
+}
+
+.kosong-icon svg{
+  width: 100%;
+  height: 100%;
+}
+
+/* Filter chip count badges */
+.chip-count{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 10px;
+  background: rgba(47,155,244,0.2);
+  color: var(--biru-2);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.on .chip-count{
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+[data-theme="dark"] .chip-count{
+  background: rgba(47,155,244,0.3);
+  color: #5DAFFF;
+}
+
+/* Improve prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  *,
+  *::before,
+  *::after{
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .ripple{
+    display: none;
+  }
+  
+  .corner-logo{
+    animation: none;
+  }
+  
+  .settings-btn.admin::after{
+    animation: none;
+  }
+}
+
+/* Lite mode adjustments */
+body.lite .modal .glass{
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+}
+
+body.lite .tabnav.glass{
+  backdrop-filter: blur(10px) saturate(1.5);
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+}
+
+body.lite .glass{
+  backdrop-filter: blur(10px) saturate(1.4);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+}
+
+body.lite .ripple{
+  display: none;
+}
+
+body.lite .corner-logo{
+  animation: none;
+}
