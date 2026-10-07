@@ -71,6 +71,7 @@ const state = {
   lite: false,
   liteManual: null,
   muted: safeGet('mpk_v3_muted') === '1',
+  theme: safeGet('mpk_v3_theme') || 'light', // light, dark, auto
   admin: { active: false, token: null, refresh: null, expiresAt: 0 },
   events: [],
   eventsLoaded: false,
@@ -98,10 +99,28 @@ const state = {
 const toastWrap = $('#toastWrap');
 function toast(msg, opts = {}){
   // Pesan yang sama tidak ditumpuk: cukup satu toast aktif
-  for (const t of toastWrap.children){ if (t.textContent === msg && !t.classList.contains('out')) return; }
+  for (const t of toastWrap.children){ 
+    const txt = t.querySelector('.toast-msg');
+    if (txt && txt.textContent === msg && !t.classList.contains('out')) return; 
+  }
   const el = document.createElement('div');
   el.className = 'toast' + (opts.err ? ' err' : '');
-  el.textContent = msg;
+  
+  const msgEl = document.createElement('span');
+  msgEl.className = 'toast-msg';
+  msgEl.textContent = msg;
+  el.appendChild(msgEl);
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.setAttribute('aria-label', 'Tutup notifikasi');
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', () => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 400);
+  });
+  el.appendChild(closeBtn);
+  
   toastWrap.appendChild(el);
   while (toastWrap.children.length > 3) toastWrap.firstChild.remove();
   const ttl = opts.ttl || 3400;
@@ -808,9 +827,21 @@ function renderListUmum(){
   if (!items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    k.textContent = state.filter === 'all'
+    
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('class', 'kosong-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#icon-empty-inbox');
+    icon.appendChild(use);
+    k.appendChild(icon);
+    
+    const text = document.createElement('span');
+    text.textContent = state.filter === 'all'
       ? 'Belum ada aspirasi. Jadilah yang pertama mengirim!'
       : 'Belum ada aspirasi dengan status ' + state.filter + '.';
+    k.appendChild(text);
+    
     el.appendChild(k);
     $('#listHitung').textContent = '0 aspirasi';
     $('#btnMuat').hidden = true;
@@ -1110,7 +1141,13 @@ async function submitAspirasi(ta, cnt, btn, eventId){
 
   ta.value = '';
   if (cnt) cnt.textContent = '1000 karakter tersisa';
-  toast('Aspirasi terkirim. Terima kasih sudah bersuara!');
+  
+  // Cek jika aspirasi di-moderate (auto-hidden)
+  if (r.data && r.data.moderated){
+    toast(r.data.message || 'Aspirasi terkirim dan sedang ditinjau pengurus MPK');
+  } else {
+    toast('Aspirasi terkirim. Terima kasih sudah bersuara!');
+  }
   confettiBurst();
 
   if (eventId){
@@ -1365,9 +1402,23 @@ function renderEventBody(eventId){
   } else if (!b.items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    k.textContent = b.error
+    
+    if (!b.error){
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('class', 'kosong-icon');
+      icon.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#icon-empty-inbox');
+      icon.appendChild(use);
+      k.appendChild(icon);
+    }
+    
+    const text = document.createElement('span');
+    text.textContent = b.error
       ? 'Aspirasi belum bisa dimuat. Tutup lalu buka lagi event ini.'
       : (ev.locked ? 'Belum ada aspirasi di event ini.' : 'Belum ada aspirasi di sini. Jadilah yang pertama!');
+    k.appendChild(text);
+    
     list.appendChild(k);
   } else {
     b.items.forEach((a, i) => list.appendChild(buildCard(a, i < 3)));
@@ -1686,6 +1737,32 @@ function initSettings(){
     applyMute();
   });
   applyMute();
+
+  // dark mode toggle
+  const tglTheme = $('#tglTheme');
+  const themeDesc = $('#themeDesc');
+  function applyTheme(){
+    const effective = state.theme === 'auto' 
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : state.theme;
+    document.documentElement.setAttribute('data-theme', effective);
+    const labels = { light: 'Terang', dark: 'Gelap', auto: 'Otomatis' };
+    themeDesc.textContent = labels[state.theme] || 'Terang';
+  }
+  
+  tglTheme.addEventListener('click', () => {
+    const modes = ['light', 'dark', 'auto'];
+    const idx = modes.indexOf(state.theme);
+    state.theme = modes[(idx + 1) % modes.length];
+    safeSet('mpk_v3_theme', state.theme);
+    applyTheme();
+  });
+  applyTheme();
+  
+  // listen to system theme changes if auto
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (state.theme === 'auto') applyTheme();
+  });
 }
 
 function detectLite(){
@@ -1765,6 +1842,17 @@ function confettiBurst(){
 /* ============================================================
    GLASS SHINE & BUTTON GLOW
    ============================================================ */
+function createRipple(el, x, y){
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  const size = Math.max(el.offsetWidth, el.offsetHeight) * 2;
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (x - size / 2) + 'px';
+  ripple.style.top = (y - size / 2) + 'px';
+  el.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+}
+
 function initGlassShine(){
   const glassEls = () => $$('.glass, .tabnav, .settings-btn, .modal');
   let activeGlass = null;
@@ -1796,6 +1884,13 @@ function initGlassShine(){
     el.style.setProperty('--x', ((e.clientX - r.left) / r.width * 100) + '%');
     el.style.setProperty('--y', ((e.clientY - r.top) / r.height * 100) + '%');
     litOne(el);
+    
+    // Add ripple effect
+    const rippleTarget = e.target.closest('.tombol, .chip, .vote-btn, .tab, .event-toggle');
+    if (rippleTarget && !rippleTarget.disabled){
+      const rr = rippleTarget.getBoundingClientRect();
+      createRipple(rippleTarget, e.clientX - rr.left, e.clientY - rr.top);
+    }
   }, { passive: true });
 
   document.addEventListener('pointermove', (e) => {
