@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Aspirasi Digital MPK Mahardika SMAN 1 Cipari — v3.9.1 -->
+<!-- Aspirasi Digital MPK Mahardika SMAN 1 Cipari — v3.9.6 -->
 <html lang="id">
 <head>
 <meta charset="utf-8">
@@ -7,6 +7,7 @@
 <title>Aspirasi Digital MPK Mahardika SMAN 1 Cipari</title>
 <meta name="description" content="Wadah aspirasi anonim siswa untuk MPK Mahardika SMAN 1 Cipari.">
 <meta name="theme-color" content="#2F9BF4">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script>
   try {
     var mpkTheme = localStorage.getItem('mpk_v3_theme') || 'light';
@@ -19,6 +20,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="intro-lock">
+<a class="skip-link" href="#app">Lewati ke konten utama</a>
 
 <!-- Latar belakang: aurora + doodle -->
 <div class="bg" id="bg" aria-hidden="true">
@@ -94,7 +96,7 @@
   </button>
 </nav>
 
-<main id="app" class="stage">
+<main id="app" class="stage" tabindex="-1">
 
   <!-- ============ BERANDA ============ -->
   <section class="panel" id="panel-beranda" role="tabpanel" aria-labelledby="tabBtn-beranda">
@@ -305,14 +307,6 @@
         <span class="glow" aria-hidden="true"></span>
         Masuk
       </button>
-    </div>
-
-    <div class="setting-row">
-      <div>
-        <div class="sr-label">Mode ringan</div>
-        <div class="sr-desc" id="liteDesc">Otomatis</div>
-      </div>
-      <button class="toggle" id="tglLite" role="switch" aria-checked="false" aria-label="Mode ringan"></button>
     </div>
 
     <div class="setting-row">

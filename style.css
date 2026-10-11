@@ -1,3 +1,4 @@
+/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — style.css — v3.9.6 */
 /* ============================================================
    1. TOKEN WARNA
    ============================================================ */
@@ -74,6 +75,12 @@ button{ font:inherit; color:inherit; }
   position:absolute; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
 }
+.skip-link{
+  position:fixed; left:12px; top:12px; z-index:300;
+  transform:translateY(-180%); padding:10px 14px;
+  color:#fff; background:var(--navy); border-radius:10px;
+}
+.skip-link:focus{ transform:translateY(0); }
 
 /* ============================================================
    3. KACA CAIR
@@ -339,7 +346,7 @@ button{ font:inherit; color:inherit; }
 }
 
 .stage{ position:relative; }
-.stage.animating{ overflow:hidden; transition:height .36s cubic-bezier(.4,0,.2,1); }
+.stage.animating{ transition:height .36s cubic-bezier(.4,0,.2,1); }
 
 .panel{ display:block; }
 .panel[hidden]{ display:none; }
@@ -1060,7 +1067,7 @@ textarea:focus{
 .confetti.on{ display:block; }
 
 /* ============================================================
-   16. REDUCED MOTION & LITE
+   16. REDUCED MOTION
    ============================================================ */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{
@@ -1070,19 +1077,6 @@ textarea:focus{
   }
 }
 
-body.lite .glass{
-  -webkit-backdrop-filter:blur(8px) saturate(1.4);
-  backdrop-filter:blur(8px) saturate(1.4);
-}
-body.lite .tabnav,
-body.lite .modal{
-  -webkit-backdrop-filter:blur(8px) saturate(1.4);
-  backdrop-filter:blur(8px) saturate(1.4);
-}
-body.lite .liquid{
-  -webkit-backdrop-filter:blur(6px) saturate(1.5);
-  backdrop-filter:blur(6px) saturate(1.5);
-}
 /* Logo: latar putih JPEG melebur ke krem */
 .logos img,.idcard-logo{ mix-blend-mode:multiply; background:transparent; }
 
@@ -1539,29 +1533,6 @@ p, .card-isi, textarea, input, .panel-desk{
   }
 }
 
-/* Lite mode adjustments */
-body.lite .modal .glass{
-  backdrop-filter: blur(12px) saturate(1.5);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5);
-}
-
-body.lite .tabnav.glass{
-  backdrop-filter: blur(10px) saturate(1.5);
-  -webkit-backdrop-filter: blur(10px) saturate(1.5);
-}
-
-body.lite .glass{
-  backdrop-filter: blur(10px) saturate(1.4);
-  -webkit-backdrop-filter: blur(10px) saturate(1.4);
-}
-
-body.lite .ripple{
-  display: none;
-}
-
-body.lite .corner-logo{
-  animation: none;
-}
 /* ============================================================
    PEMBARUAN E.1: v3.9.1 - Dark Mode UI Fixes + Smooth Animations
    ============================================================ */
@@ -2030,12 +2001,4 @@ input[type="password"]{
   .card.is-hidden{
     transform: none;
   }
-}
-
-/* Mode Ringan: hentikan blur paling mahal pada daftar berulang. */
-body.lite .card,
-body.lite .toast,
-body.lite .event-card{
-  -webkit-backdrop-filter:none;
-  backdrop-filter:none;
 }

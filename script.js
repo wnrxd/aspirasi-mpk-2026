@@ -1,4 +1,4 @@
-/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js — v3.9.1
+/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js — v3.9.6
    Tanpa library. fetch langsung ke Supabase (PostgREST + GoTrue). */
 (() => {
 'use strict';
@@ -81,8 +81,6 @@ function dedupeById(oldItems, rows){
 const state = {
   tab: 'beranda',
   subTab: 'isi',
-  lite: false,
-  liteManual: null,
   muted: safeGet('mpk_v3_muted') === '1',
   theme: safeGet('mpk_v3_theme') === 'dark' ? 'dark' : 'light',
   admin: { active: false, token: null, refresh: null, expiresAt: 0 },
@@ -232,6 +230,10 @@ function clearAspirasiCaches(){
   } catch(_) {}
 }
 
+function publicRows(rows){
+  return state.admin.active ? rows : rows.filter(row => row.hidden !== true);
+}
+
 /* ============================================================
    PREFETCH & PEMUATAN DATA
    ============================================================ */
@@ -287,11 +289,11 @@ async function loadListUmumPage(offset, append){
   if (r.ok && Array.isArray(r.data)){
     const rows = r.data.slice(0, 20);
     const hasMore = r.data.length > 20;
-    state.listUmum.items = append ? dedupeById(state.listUmum.items, rows) : rows;
+    state.listUmum.items = append ? dedupeById(state.listUmum.items, publicRows(rows)) : publicRows(rows);
     state.listUmum.offset = offset + rows.length;
     state.listUmum.hasMore = hasMore;
     state.listUmum.inited = true;
-    if (offset === 0 && state.filter === 'all') cacheSet(K.listU, rows);
+    if (offset === 0 && state.filter === 'all' && !state.admin.active) cacheSet(K.listU, publicRows(rows));
     renderListUmum();
     setOffline(false);
   } else {
@@ -327,13 +329,13 @@ async function loadListEventPage(eventId, offset, append){
   const r = await api(url);
   if (r.ok && Array.isArray(r.data)){
     const rows = r.data.slice(0, 20);
-    bucket.items = append ? dedupeById(bucket.items, rows) : rows;
+    bucket.items = append ? dedupeById(bucket.items, publicRows(rows)) : publicRows(rows);
     bucket.offset = offset + rows.length;
     bucket.hasMore = r.data.length > 20;
     bucket.loaded = true;
     bucket.error = false;
     bucket.loading = false; // harus mati sebelum render, kalau tidak event kosong tampil sebagai skeleton
-    cacheSet('mpk_v32_list_event_' + eventId + '_p1', bucket.items);
+    if (!state.admin.active) cacheSet('mpk_v32_list_event_' + eventId + '_p1', bucket.items);
     renderEventBody(eventId);
   } else {
     const cached = cacheGet('mpk_v32_list_event_' + eventId + '_p1');
@@ -418,7 +420,7 @@ const doodleEls = [];
 function buildDoodles(){
   doodlesEl.innerHTML = '';
   doodleEls.length = 0;
-  const places = state.lite ? DOODLE_PLACES.slice(0, 14) : DOODLE_PLACES;
+  const places = DOODLE_PLACES;
   places.forEach((p, idx) => {
     const el = document.createElement('div');
     el.className = 'dw';
@@ -638,6 +640,23 @@ const TABS = ['beranda','aspirasi','event','tentang'];
 
 function currentPanel(){ return $('#panel-' + state.tab); }
 
+function updateSubTabIndicator(){
+  const seg = $('#segAspirasi');
+  const ind = $('#segIndicator');
+  if (!seg || !ind || seg.offsetParent === null) return;
+  const on = seg.querySelector('button[aria-selected="true"]');
+  if (!on) return;
+  const parentRect = seg.getBoundingClientRect();
+  const r = on.getBoundingClientRect();
+  ind.style.width = r.width + 'px';
+  ind.style.transform = `translateX(${r.left - parentRect.left}px)`;
+}
+
+function refreshActiveLayout(){
+  updateSubTabIndicator();
+  moveTabIndicator();
+}
+
 function isEventUnlocked(){
   if (state.admin.active) return true;
   return state.events.some(e => e.locked === false);
@@ -681,8 +700,6 @@ function setTab(tab, opts = {}){
 
   // Set tinggi stage
   if (oldP){
-    stage.style.height = oldP.offsetHeight + 'px';
-    stage.classList.add('animating');
     oldP.style.setProperty('--dir', String(dir));
     oldP.classList.add('leaving');
   }
@@ -698,11 +715,10 @@ function setTab(tab, opts = {}){
     const newP = currentPanel();
     newP.hidden = false;
     newP.classList.add('entering');
-    // update tinggi stage ke tinggi baru
-    stage.style.height = newP.offsetHeight + 'px';
 
     setAuroraTab(tab);
     syncTabs();
+    refreshActiveLayout();
 
     // reset scroll
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -713,8 +729,7 @@ function setTab(tab, opts = {}){
 
     setTimeout(() => {
       newP.classList.remove('entering');
-      stage.classList.remove('animating');
-      stage.style.height = '';
+      refreshActiveLayout();
       state.tabBusy = false;
     }, 460);
   }, 260);
@@ -798,16 +813,18 @@ function initTabs(){
   applyHash(location.hash.replace('#','') || 'beranda', true);
 }
 
-function applyHash(h, initial = false){
+async function applyHash(h, initial = false){
   if (!TABS.includes(h)) h = 'beranda';
   if (h === 'event' && !isEventUnlocked()){
-    if (!initial) toast('Belum ada event yang dibuka pengurus MPK');
-    if (location.hash !== '#beranda') history.replaceState(null, '', '#beranda');
-    h = 'beranda';
+    await ensureEvents();
+    if (!isEventUnlocked()){
+      if (!initial) toast('Belum ada event yang dibuka pengurus MPK');
+      if (location.hash !== '#beranda') history.replaceState(null, '', '#beranda');
+      h = 'beranda';
+    }
   }
   if (h !== state.tab){
     state.tab = h;
-    // langsung tampilkan (initial)
     TABS.forEach(t => {
       const p = $('#panel-' + t);
       const on = t === h;
@@ -819,6 +836,8 @@ function applyHash(h, initial = false){
     }, 500);
     setAuroraTab(h);
     syncTabs();
+    requestAnimationFrame(refreshActiveLayout);
+    document.fonts?.ready.then(refreshActiveLayout);
   }
 }
 
@@ -1080,14 +1099,7 @@ async function onToggleHidden(a, card){
 function initSubTab(){
   const seg = $('#segAspirasi');
   const ind = $('#segIndicator');
-  function update(){
-    const on = seg.querySelector('button[aria-selected="true"]');
-    if (!on || !ind) return;
-    const parentRect = seg.getBoundingClientRect();
-    const r = on.getBoundingClientRect();
-    ind.style.width = r.width + 'px';
-    ind.style.transform = `translateX(${r.left - parentRect.left}px)`;
-  }
+  function update(){ updateSubTabIndicator(); }
   seg.querySelectorAll('button').forEach(b => {
     b.addEventListener('click', () => {
       seg.querySelectorAll('button').forEach(x => {
@@ -1115,7 +1127,7 @@ function initSubTab(){
   // ukur setelah render
   requestAnimationFrame(update);
   window.addEventListener('resize', update);
-  setTimeout(update, 60);
+  document.fonts?.ready.then(update);
 }
 
 /* ============================================================
@@ -1194,7 +1206,7 @@ async function refreshListUmum(){
 }
 
 function ensureListUmum(){
-  if (!state.listUmum.inited){
+  if (!state.listUmum.inited && !state.admin.active){
     const cached = cacheGet(K.listU);
     if (cached){
       state.listUmum.items = cached;
@@ -1231,8 +1243,8 @@ function setOffline(on){
    EVENT
    ============================================================ */
 function ensureEvents(){
-  if (state.eventsLoaded && state.events.length) return;
-  loadEvents();
+  if (state.eventsLoaded) return Promise.resolve();
+  return loadEvents();
 }
 
 function renderEventList(){
@@ -1626,6 +1638,9 @@ function forceAdminLogout(msg){
   state.admin.refresh = null;
   state.admin.expiresAt = 0;
   clearAspirasiCaches();
+  // Buang daftar yang mungkin berisi data khusus admin, muat ulang sebagai user biasa.
+  state.listUmum = { items: [], offset: 0, hasMore: false, loading: false, inited: false, seq: 0 };
+  state.listEvent = {};
   if (state.refreshTimer) clearTimeout(state.refreshTimer);
   state.refreshTimer = null;
   updateAdminUI();
@@ -1660,8 +1675,21 @@ function updateAdminUI(){
 /* ============================================================
    SETTINGS & MODAL
    ============================================================ */
-function openModal(el){ el.hidden = false; document.body.style.overflow = 'hidden'; }
-function closeModal(el){ el.hidden = true; document.body.style.overflow = ''; }
+let modalReturnFocus = null;
+const modalFocusable = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function openModal(el){
+  modalReturnFocus = document.activeElement;
+  el.hidden = false;
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => el.querySelector(modalFocusable)?.focus());
+}
+function closeModal(el){
+  el.hidden = true;
+  document.body.style.overflow = '';
+  if (modalReturnFocus instanceof HTMLElement) modalReturnFocus.focus();
+  modalReturnFocus = null;
+}
 
 function initSettings(){
   const btnS = $('#settingsBtn');
@@ -1672,6 +1700,15 @@ function initSettings(){
     updateAdminUI();
     openModal(modalS);
   });
+  [modalS, modalL].forEach(modal => modal.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(modal); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...modal.querySelectorAll(modalFocusable)];
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }));
   $('#btnSettingsClose').addEventListener('click', () => closeModal(modalS));
   modalS.addEventListener('click', (e) => { if (e.target === modalS) closeModal(modalS); });
 
@@ -1707,32 +1744,6 @@ function initSettings(){
     updateAdminUI();
   }
 
-  // lite toggle
-  const tglLite = $('#tglLite');
-  const liteDesc = $('#liteDesc');
-  const manual = safeGet('mpk_v3_lite_manual');
-  if (manual === '1'){ state.liteManual = true; }
-  else if (manual === '0'){ state.liteManual = false; }
-  applyLite();
-
-  tglLite.addEventListener('click', () => {
-    const next = !state.lite;
-    state.liteManual = next;
-    safeSet('mpk_v3_lite_manual', next ? '1' : '0');
-    applyLite();
-  });
-
-  function applyLite(){
-    const auto = detectLite();
-    state.lite = state.liteManual === null ? auto : state.liteManual;
-    document.body.classList.toggle('lite', state.lite);
-    tglLite.classList.toggle('on', state.lite);
-    tglLite.setAttribute('aria-checked', state.lite ? 'true' : 'false');
-    liteDesc.textContent = state.liteManual === null ? 'Otomatis' : (state.lite ? 'Aktif' : 'Nonaktif');
-    // rebuild doodles bila perlu
-    if (doodleEls.length) buildDoodles();
-  }
-
   // suara toggle
   const tglMute = $('#tglMute');
   const muteDesc = $('#muteDesc');
@@ -1765,16 +1776,6 @@ function initSettings(){
   applyTheme();
 }
 
-function detectLite(){
-  const hc = navigator.hardwareConcurrency || 8;
-  const dm = navigator.deviceMemory || 8;
-  const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (rm) return true;
-  if (hc <= 4) return true;
-  if (dm <= 4) return true;
-  return false;
-}
-
 /* ============================================================
    CONFETTI
    ============================================================ */
@@ -1782,13 +1783,12 @@ const confCanvas = $('#confetti');
 let confCtx = null, confParts = [], confRAF = null;
 
 function confettiBurst(){
-  if (state.lite && Math.random() < 0.4) return; // hemat di lite (kadang)
   const w = window.innerWidth, h = window.innerHeight;
   confCanvas.width = w; confCanvas.height = h;
   confCanvas.classList.add('on');
   confCtx = confCanvas.getContext('2d');
 
-  const N = state.lite ? 40 : 90;
+  const N = 90;
   confParts = [];
   for (let i = 0; i < N; i++){
     confParts.push({
@@ -1996,9 +1996,6 @@ function init(){
   $('#tabnav').setAttribute('inert', '');
   $('#app').setAttribute('inert', '');
   $('#settingsBtn').setAttribute('inert', '');
-
-  // deteksi lite awal (sebelum applyLite user setting)
-  if (detectLite()) document.body.classList.add('lite');
 
   buildDoodles();
   initLanyard();
