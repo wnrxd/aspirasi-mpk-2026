@@ -1,4 +1,4 @@
-/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js
+/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js — v3.9.6
    Tanpa library. fetch langsung ke Supabase (PostgREST + GoTrue). */
 (() => {
 'use strict';
@@ -53,6 +53,19 @@ function markVoted(id){
   const arr = getVotedIds();
   if (!arr.includes(id)) { arr.push(id); setVotedIds(arr); }
 }
+function unmarkVoted(id){
+  setVotedIds(getVotedIds().filter(x => x !== id));
+}
+
+async function syncVotedIds(){
+  const r = await api('/rest/v1/rpc/get_voted_aspirasi', {
+    method: 'POST',
+    body: { p_client_id: state.clientId }
+  });
+  if (!r.ok || !Array.isArray(r.data)) return;
+  state.voted = r.data.filter(id => typeof id === 'string');
+  setVotedIds(state.voted);
+}
 
 const dfID = new Intl.DateTimeFormat('id-ID', { day:'numeric', month:'short', year:'numeric' });
 
@@ -68,9 +81,8 @@ function dedupeById(oldItems, rows){
 const state = {
   tab: 'beranda',
   subTab: 'isi',
-  lite: false,
-  liteManual: null,
   muted: safeGet('mpk_v3_muted') === '1',
+  theme: safeGet('mpk_v3_theme') === 'dark' ? 'dark' : 'light',
   admin: { active: false, token: null, refresh: null, expiresAt: 0 },
   events: [],
   eventsLoaded: false,
@@ -98,10 +110,28 @@ const state = {
 const toastWrap = $('#toastWrap');
 function toast(msg, opts = {}){
   // Pesan yang sama tidak ditumpuk: cukup satu toast aktif
-  for (const t of toastWrap.children){ if (t.textContent === msg && !t.classList.contains('out')) return; }
+  for (const t of toastWrap.children){
+    const txt = t.querySelector('.toast-msg');
+    if (txt && txt.textContent === msg && !t.classList.contains('out')) return;
+  }
   const el = document.createElement('div');
   el.className = 'toast' + (opts.err ? ' err' : '');
-  el.textContent = msg;
+
+  const msgEl = document.createElement('span');
+  msgEl.className = 'toast-msg';
+  msgEl.textContent = msg;
+  el.appendChild(msgEl);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.setAttribute('aria-label', 'Tutup notifikasi');
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', () => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 400);
+  });
+  el.appendChild(closeBtn);
+
   toastWrap.appendChild(el);
   while (toastWrap.children.length > 3) toastWrap.firstChild.remove();
   const ttl = opts.ttl || 3400;
@@ -192,6 +222,18 @@ function cacheGet(key){
   } catch(_) { return null; }
 }
 
+function clearAspirasiCaches(){
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key === K.listU || key.startsWith('mpk_v32_list_event_')) localStorage.removeItem(key);
+    });
+  } catch(_) {}
+}
+
+function publicRows(rows){
+  return state.admin.active ? rows : rows.filter(row => row.hidden !== true);
+}
+
 /* ============================================================
    PREFETCH & PEMUATAN DATA
    ============================================================ */
@@ -238,19 +280,20 @@ async function loadListUmumPage(offset, append){
   state.listUmum.loading = true;
   const my = state.listUmum.seq = (state.listUmum.seq | 0) + 1;
   const fq = state.filter !== 'all' ? '&status=eq.' + encodeURIComponent(state.filter) : '';
+  const hiddenCol = state.admin.active ? ',hidden' : '';
 
-  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id&event_id=is.null${fq}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
+  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id${hiddenCol}&event_id=is.null${fq}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
   if (my !== state.listUmum.seq) return; // ada permintaan yang lebih baru (mis. filter diganti)
 
   if (r.ok && Array.isArray(r.data)){
     const rows = r.data.slice(0, 20);
     const hasMore = r.data.length > 20;
-    state.listUmum.items = append ? dedupeById(state.listUmum.items, rows) : rows;
+    state.listUmum.items = append ? dedupeById(state.listUmum.items, publicRows(rows)) : publicRows(rows);
     state.listUmum.offset = offset + rows.length;
     state.listUmum.hasMore = hasMore;
     state.listUmum.inited = true;
-    if (offset === 0 && state.filter === 'all') cacheSet(K.listU, rows);
+    if (offset === 0 && state.filter === 'all' && !state.admin.active) cacheSet(K.listU, publicRows(rows));
     renderListUmum();
     setOffline(false);
   } else {
@@ -281,17 +324,18 @@ async function loadListEventPage(eventId, offset, append){
   bucket.loading = true;
   if (!bucket.items.length) renderEventBody(eventId); // tampilkan skeleton selama memuat
 
-  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id&event_id=eq.${eventId}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
+  const hiddenCol = state.admin.active ? ',hidden' : '';
+  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id${hiddenCol}&event_id=eq.${eventId}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
   if (r.ok && Array.isArray(r.data)){
     const rows = r.data.slice(0, 20);
-    bucket.items = append ? dedupeById(bucket.items, rows) : rows;
+    bucket.items = append ? dedupeById(bucket.items, publicRows(rows)) : publicRows(rows);
     bucket.offset = offset + rows.length;
     bucket.hasMore = r.data.length > 20;
     bucket.loaded = true;
     bucket.error = false;
     bucket.loading = false; // harus mati sebelum render, kalau tidak event kosong tampil sebagai skeleton
-    cacheSet('mpk_v32_list_event_' + eventId + '_p1', bucket.items);
+    if (!state.admin.active) cacheSet('mpk_v32_list_event_' + eventId + '_p1', bucket.items);
     renderEventBody(eventId);
   } else {
     const cached = cacheGet('mpk_v32_list_event_' + eventId + '_p1');
@@ -376,7 +420,7 @@ const doodleEls = [];
 function buildDoodles(){
   doodlesEl.innerHTML = '';
   doodleEls.length = 0;
-  const places = state.lite ? DOODLE_PLACES.slice(0, 14) : DOODLE_PLACES;
+  const places = DOODLE_PLACES;
   places.forEach((p, idx) => {
     const el = document.createElement('div');
     el.className = 'dw';
@@ -596,6 +640,23 @@ const TABS = ['beranda','aspirasi','event','tentang'];
 
 function currentPanel(){ return $('#panel-' + state.tab); }
 
+function updateSubTabIndicator(){
+  const seg = $('#segAspirasi');
+  const ind = $('#segIndicator');
+  if (!seg || !ind || seg.offsetParent === null) return;
+  const on = seg.querySelector('button[aria-selected="true"]');
+  if (!on) return;
+  const parentRect = seg.getBoundingClientRect();
+  const r = on.getBoundingClientRect();
+  ind.style.width = r.width + 'px';
+  ind.style.transform = `translateX(${r.left - parentRect.left}px)`;
+}
+
+function refreshActiveLayout(){
+  updateSubTabIndicator();
+  moveTabIndicator();
+}
+
 function isEventUnlocked(){
   if (state.admin.active) return true;
   return state.events.some(e => e.locked === false);
@@ -617,7 +678,7 @@ function updateEventGate(){
 function setTab(tab, opts = {}){
   if (!TABS.includes(tab)) tab = 'beranda';
   if (state.tabBusy) return;
-  if (tab === state.tab){ 
+  if (tab === state.tab){
     syncTabs();
     return;
   }
@@ -639,8 +700,6 @@ function setTab(tab, opts = {}){
 
   // Set tinggi stage
   if (oldP){
-    stage.style.height = oldP.offsetHeight + 'px';
-    stage.classList.add('animating');
     oldP.style.setProperty('--dir', String(dir));
     oldP.classList.add('leaving');
   }
@@ -656,11 +715,10 @@ function setTab(tab, opts = {}){
     const newP = currentPanel();
     newP.hidden = false;
     newP.classList.add('entering');
-    // update tinggi stage ke tinggi baru
-    stage.style.height = newP.offsetHeight + 'px';
 
     setAuroraTab(tab);
     syncTabs();
+    refreshActiveLayout();
 
     // reset scroll
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -671,8 +729,7 @@ function setTab(tab, opts = {}){
 
     setTimeout(() => {
       newP.classList.remove('entering');
-      stage.classList.remove('animating');
-      stage.style.height = '';
+      refreshActiveLayout();
       state.tabBusy = false;
     }, 460);
   }, 260);
@@ -756,16 +813,18 @@ function initTabs(){
   applyHash(location.hash.replace('#','') || 'beranda', true);
 }
 
-function applyHash(h, initial = false){
+async function applyHash(h, initial = false){
   if (!TABS.includes(h)) h = 'beranda';
   if (h === 'event' && !isEventUnlocked()){
-    if (!initial) toast('Belum ada event yang dibuka pengurus MPK');
-    if (location.hash !== '#beranda') history.replaceState(null, '', '#beranda');
-    h = 'beranda';
+    await ensureEvents();
+    if (!isEventUnlocked()){
+      if (!initial) toast('Belum ada event yang dibuka pengurus MPK');
+      if (location.hash !== '#beranda') history.replaceState(null, '', '#beranda');
+      h = 'beranda';
+    }
   }
   if (h !== state.tab){
     state.tab = h;
-    // langsung tampilkan (initial)
     TABS.forEach(t => {
       const p = $('#panel-' + t);
       const on = t === h;
@@ -777,6 +836,8 @@ function applyHash(h, initial = false){
     }, 500);
     setAuroraTab(h);
     syncTabs();
+    requestAnimationFrame(refreshActiveLayout);
+    document.fonts?.ready.then(refreshActiveLayout);
   }
 }
 
@@ -806,9 +867,21 @@ function renderListUmum(){
   if (!items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    k.textContent = state.filter === 'all'
+
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('class', 'kosong-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#icon-empty-inbox');
+    icon.appendChild(use);
+    k.appendChild(icon);
+
+    const text = document.createElement('span');
+    text.textContent = state.filter === 'all'
       ? 'Belum ada aspirasi. Jadilah yang pertama mengirim!'
       : 'Belum ada aspirasi dengan status ' + state.filter + '.';
+    k.appendChild(text);
+
     el.appendChild(k);
     $('#listHitung').textContent = '0 aspirasi';
     $('#btnMuat').hidden = true;
@@ -847,7 +920,7 @@ function buildCard(a, reveal){
   const vbtn = document.createElement('button');
   vbtn.className = 'vote-btn' + (state.voted.includes(a.id) ? ' voted' : '');
   vbtn.type = 'button';
-  vbtn.setAttribute('aria-label', 'Dukung aspirasi ini');
+  vbtn.setAttribute('aria-label', state.voted.includes(a.id) ? 'Batalkan dukungan' : 'Dukung aspirasi ini');
   const arrow = document.createElement('span'); arrow.textContent = '▲';
   const num = document.createElement('span');
   num.className = 'vote-num';
@@ -879,6 +952,25 @@ function buildCard(a, reveal){
     del.innerHTML = '<span class="glow"></span>Hapus';
     del.addEventListener('click', () => onDeleteAspirasi(a, card));
     foot.appendChild(del);
+
+    const hideBtn = document.createElement('button');
+    hideBtn.type = 'button';
+    hideBtn.className = 'tombol netral kecil';
+    hideBtn.innerHTML = '<span class="glow"></span>' + (a.hidden ? 'Tampilkan' : 'Sembunyikan');
+    hideBtn.addEventListener('click', () => onToggleHidden(a, card));
+    foot.appendChild(hideBtn);
+
+    // Lencana "Disembunyikan" (hanya admin yang lihat)
+    if (a.hidden) {
+      const badge = document.createElement('span');
+      badge.className = 'pill';
+      badge.style.background = 'rgba(120,130,140,.24)';
+      badge.style.borderColor = 'rgba(120,130,140,.4)';
+      badge.style.color = '#4E5A60';
+      badge.textContent = 'Disembunyikan';
+      top.appendChild(badge);
+      card.classList.add('is-hidden');
+    }
   }
 
   card.appendChild(top);
@@ -897,13 +989,12 @@ async function onVote(a, btn, numEl){
   const before = a.votes | 0;
   const already = state.voted.includes(a.id);
 
-  // optimistic
-  if (!already){
-    a.votes = before + 1;
-    numEl.textContent = String(a.votes);
-    numEl.classList.remove('bump'); void numEl.offsetWidth; numEl.classList.add('bump');
-    btn.classList.add('voted');
-  }
+  // Optimistic toggle: klik kedua membatalkan dukungan.
+  a.votes = Math.max(0, before + (already ? -1 : 1));
+  numEl.textContent = String(a.votes);
+  numEl.classList.remove('bump'); void numEl.offsetWidth; numEl.classList.add('bump');
+  btn.classList.toggle('voted', !already);
+  btn.setAttribute('aria-label', already ? 'Dukung aspirasi ini' : 'Batalkan dukungan');
 
   const r = await api('/rest/v1/rpc/vote_aspirasi', {
     method: 'POST',
@@ -912,24 +1003,22 @@ async function onVote(a, btn, numEl){
 
   if (!r.ok){
     toast(r.error || 'Gagal mengirim dukungan', { err: true });
-    // rollback
-    if (!already){
-      a.votes = before;
-      numEl.textContent = String(before);
-      btn.classList.remove('voted');
-    }
+    a.votes = before;
+    numEl.textContent = String(before);
+    btn.classList.toggle('voted', already);
+    btn.setAttribute('aria-label', already ? 'Batalkan dukungan' : 'Dukung aspirasi ini');
   } else if (r.data && r.data.success){
     a.votes = r.data.votes | 0;
     numEl.textContent = String(a.votes);
-    if (r.data.already){
+    if (r.data.voted){
       markVoted(a.id);
-      state.voted = getVotedIds();
       btn.classList.add('voted');
     } else {
-      markVoted(a.id);
-      state.voted = getVotedIds();
-      btn.classList.add('voted');
+      unmarkVoted(a.id);
+      btn.classList.remove('voted');
     }
+    state.voted = getVotedIds();
+    btn.setAttribute('aria-label', r.data.voted ? 'Batalkan dukungan' : 'Dukung aspirasi ini');
   }
   btn.dataset.busy = '0';
 }
@@ -957,20 +1046,60 @@ async function onStatusChange(a, sel){
   toast('Status diperbarui');
 }
 
+async function onToggleHidden(a, card){
+  const next = !a.hidden;
+  const r = await api('/rest/v1/rpc/admin_set_hidden', {
+    method: 'POST',
+    body: { p_id: a.id, p_hidden: next }
+  });
+  if (!r.ok){
+    toast(r.error || 'Gagal mengubah visibilitas', { err: true });
+    return;
+  }
+  a.hidden = next;
+  clearAspirasiCaches();
+  // Update tombol label
+  const btns = card.querySelectorAll('button.tombol.netral.kecil');
+  const hideBtn = btns[btns.length - 1]; // tombol terakhir adalah hide/show
+  if (hideBtn){
+    hideBtn.classList.add('label-changing');
+    hideBtn.replaceChildren();
+    const glow = document.createElement('span');
+    glow.className = 'glow';
+    hideBtn.appendChild(glow);
+    hideBtn.appendChild(document.createTextNode(next ? 'Tampilkan' : 'Sembunyikan'));
+    requestAnimationFrame(() => hideBtn.classList.remove('label-changing'));
+  }
+  // Update lencana & class
+  const top = card.querySelector('.card-top');
+  if (next){
+    const badge = document.createElement('span');
+    badge.className = 'pill';
+    badge.style.background = 'rgba(120,130,140,.24)';
+    badge.style.borderColor = 'rgba(120,130,140,.4)';
+    badge.style.color = '#4E5A60';
+    badge.textContent = 'Disembunyikan';
+    top.appendChild(badge);
+    card.classList.add('is-hidden');
+  } else {
+    const badges = top.querySelectorAll('.pill');
+    badges.forEach(b => {
+      if (b.textContent !== 'Disembunyikan') return;
+      b.classList.add('badge-out');
+      setTimeout(() => b.remove(), 250);
+    });
+    card.classList.remove('is-hidden');
+  }
+  toast(next ? 'Aspirasi disembunyikan' : 'Aspirasi ditampilkan');
+}
+
 /* ============================================================
    SUBTAB ASPIRASI
    ============================================================ */
 function initSubTab(){
   const seg = $('#segAspirasi');
   const ind = $('#segIndicator');
-  function update(){
-    const on = seg.querySelector('button[aria-selected="true"]');
-    if (!on || !ind) return;
-    const parentRect = seg.getBoundingClientRect();
-    const r = on.getBoundingClientRect();
-    ind.style.width = r.width + 'px';
-    ind.style.transform = `translateX(${r.left - parentRect.left}px)`;
-  }
+  function update(){ updateSubTabIndicator(); }
   seg.querySelectorAll('button').forEach(b => {
     b.addEventListener('click', () => {
       seg.querySelectorAll('button').forEach(x => {
@@ -998,7 +1127,7 @@ function initSubTab(){
   // ukur setelah render
   requestAnimationFrame(update);
   window.addEventListener('resize', update);
-  setTimeout(update, 60);
+  document.fonts?.ready.then(update);
 }
 
 /* ============================================================
@@ -1049,7 +1178,13 @@ async function submitAspirasi(ta, cnt, btn, eventId){
 
   ta.value = '';
   if (cnt) cnt.textContent = '1000 karakter tersisa';
-  toast('Aspirasi terkirim. Terima kasih sudah bersuara!');
+
+  // Cek jika aspirasi di-moderate (auto-hidden)
+  if (r.data && r.data.moderated){
+    toast(r.data.message || 'Aspirasi terkirim dan sedang ditinjau pengurus MPK');
+  } else {
+    toast('Aspirasi terkirim. Terima kasih sudah bersuara!');
+  }
   confettiBurst();
 
   if (eventId){
@@ -1071,7 +1206,7 @@ async function refreshListUmum(){
 }
 
 function ensureListUmum(){
-  if (!state.listUmum.inited){
+  if (!state.listUmum.inited && !state.admin.active){
     const cached = cacheGet(K.listU);
     if (cached){
       state.listUmum.items = cached;
@@ -1108,8 +1243,8 @@ function setOffline(on){
    EVENT
    ============================================================ */
 function ensureEvents(){
-  if (state.eventsLoaded && state.events.length) return;
-  loadEvents();
+  if (state.eventsLoaded) return Promise.resolve();
+  return loadEvents();
 }
 
 function renderEventList(){
@@ -1274,23 +1409,7 @@ function renderEventBody(eventId){
       cnt.textContent = sisa + ' karakter tersisa';
       cnt.classList.toggle('hampir', sisa <= 80);
     });
-    kirim.addEventListener('click', async () => {
-      const isi = ta.value.trim();
-      if (!isi){ toast('Tulis aspirasimu dulu ya', { err: true }); ta.focus(); return; }
-      kirim.disabled = true;
-      const r = await api('/rest/v1/rpc/submit_aspirasi', {
-        method: 'POST',
-        body: { p_client_id: state.clientId, p_isi: isi, p_event_id: eventId }
-      });
-      kirim.disabled = false;
-      if (!r.ok){ toast(r.error || 'Gagal mengirim aspirasi', { err: true }); return; }
-      ta.value = '';
-      cnt.textContent = '1000 karakter tersisa';
-      toast('Aspirasi event terkirim!');
-      confettiBurst();
-      b.offset = 0;
-      await loadListEventPage(eventId, 0, false);
-    });
+    kirim.addEventListener('click', () => submitAspirasi(ta, cnt, kirim, eventId));
   }
 
   // daftar aspirasi event
@@ -1304,9 +1423,23 @@ function renderEventBody(eventId){
   } else if (!b.items.length){
     const k = document.createElement('div');
     k.className = 'kosong';
-    k.textContent = b.error
+
+    if (!b.error){
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('class', 'kosong-icon');
+      icon.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#icon-empty-inbox');
+      icon.appendChild(use);
+      k.appendChild(icon);
+    }
+
+    const text = document.createElement('span');
+    text.textContent = b.error
       ? 'Aspirasi belum bisa dimuat. Tutup lalu buka lagi event ini.'
       : (ev.locked ? 'Belum ada aspirasi di event ini.' : 'Belum ada aspirasi di sini. Jadilah yang pertama!');
+    k.appendChild(text);
+
     list.appendChild(k);
   } else {
     b.items.forEach((a, i) => list.appendChild(buildCard(a, i < 3)));
@@ -1504,6 +1637,10 @@ function forceAdminLogout(msg){
   state.admin.token = null;
   state.admin.refresh = null;
   state.admin.expiresAt = 0;
+  clearAspirasiCaches();
+  // Buang daftar yang mungkin berisi data khusus admin, muat ulang sebagai user biasa.
+  state.listUmum = { items: [], offset: 0, hasMore: false, loading: false, inited: false, seq: 0 };
+  state.listEvent = {};
   if (state.refreshTimer) clearTimeout(state.refreshTimer);
   state.refreshTimer = null;
   updateAdminUI();
@@ -1538,8 +1675,21 @@ function updateAdminUI(){
 /* ============================================================
    SETTINGS & MODAL
    ============================================================ */
-function openModal(el){ el.hidden = false; document.body.style.overflow = 'hidden'; }
-function closeModal(el){ el.hidden = true; document.body.style.overflow = ''; }
+let modalReturnFocus = null;
+const modalFocusable = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function openModal(el){
+  modalReturnFocus = document.activeElement;
+  el.hidden = false;
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => el.querySelector(modalFocusable)?.focus());
+}
+function closeModal(el){
+  el.hidden = true;
+  document.body.style.overflow = '';
+  if (modalReturnFocus instanceof HTMLElement) modalReturnFocus.focus();
+  modalReturnFocus = null;
+}
 
 function initSettings(){
   const btnS = $('#settingsBtn');
@@ -1550,6 +1700,15 @@ function initSettings(){
     updateAdminUI();
     openModal(modalS);
   });
+  [modalS, modalL].forEach(modal => modal.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(modal); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...modal.querySelectorAll(modalFocusable)];
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }));
   $('#btnSettingsClose').addEventListener('click', () => closeModal(modalS));
   modalS.addEventListener('click', (e) => { if (e.target === modalS) closeModal(modalS); });
 
@@ -1585,32 +1744,6 @@ function initSettings(){
     updateAdminUI();
   }
 
-  // lite toggle
-  const tglLite = $('#tglLite');
-  const liteDesc = $('#liteDesc');
-  const manual = safeGet('mpk_v3_lite_manual');
-  if (manual === '1'){ state.liteManual = true; }
-  else if (manual === '0'){ state.liteManual = false; }
-  applyLite();
-
-  tglLite.addEventListener('click', () => {
-    const next = !state.lite;
-    state.liteManual = next;
-    safeSet('mpk_v3_lite_manual', next ? '1' : '0');
-    applyLite();
-  });
-
-  function applyLite(){
-    const auto = detectLite();
-    state.lite = state.liteManual === null ? auto : state.liteManual;
-    document.body.classList.toggle('lite', state.lite);
-    tglLite.classList.toggle('on', state.lite);
-    tglLite.setAttribute('aria-checked', state.lite ? 'true' : 'false');
-    liteDesc.textContent = state.liteManual === null ? 'Otomatis' : (state.lite ? 'Aktif' : 'Nonaktif');
-    // rebuild doodles bila perlu
-    if (doodleEls.length) buildDoodles();
-  }
-
   // suara toggle
   const tglMute = $('#tglMute');
   const muteDesc = $('#muteDesc');
@@ -1625,16 +1758,22 @@ function initSettings(){
     applyMute();
   });
   applyMute();
-}
 
-function detectLite(){
-  const hc = navigator.hardwareConcurrency || 8;
-  const dm = navigator.deviceMemory || 8;
-  const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (rm) return true;
-  if (hc <= 4) return true;
-  if (dm <= 4) return true;
-  return false;
+  // dark mode toggle
+  const tglTheme = $('#tglTheme');
+  const themeDesc = $('#themeDesc');
+  function applyTheme(){
+    document.documentElement.setAttribute('data-theme', state.theme);
+    const labels = { light: 'Terang', dark: 'Gelap' };
+    themeDesc.textContent = labels[state.theme] || 'Terang';
+  }
+
+  tglTheme.addEventListener('click', () => {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    safeSet('mpk_v3_theme', state.theme);
+    applyTheme();
+  });
+  applyTheme();
 }
 
 /* ============================================================
@@ -1644,13 +1783,12 @@ const confCanvas = $('#confetti');
 let confCtx = null, confParts = [], confRAF = null;
 
 function confettiBurst(){
-  if (state.lite && Math.random() < 0.4) return; // hemat di lite (kadang)
   const w = window.innerWidth, h = window.innerHeight;
   confCanvas.width = w; confCanvas.height = h;
   confCanvas.classList.add('on');
   confCtx = confCanvas.getContext('2d');
 
-  const N = state.lite ? 40 : 90;
+  const N = 90;
   confParts = [];
   for (let i = 0; i < N; i++){
     confParts.push({
@@ -1704,6 +1842,17 @@ function confettiBurst(){
 /* ============================================================
    GLASS SHINE & BUTTON GLOW
    ============================================================ */
+function createRipple(el, x, y){
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  const size = Math.max(el.offsetWidth, el.offsetHeight) * 2;
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (x - size / 2) + 'px';
+  ripple.style.top = (y - size / 2) + 'px';
+  el.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+}
+
 function initGlassShine(){
   const glassEls = () => $$('.glass, .tabnav, .settings-btn, .modal');
   let activeGlass = null;
@@ -1735,6 +1884,13 @@ function initGlassShine(){
     el.style.setProperty('--x', ((e.clientX - r.left) / r.width * 100) + '%');
     el.style.setProperty('--y', ((e.clientY - r.top) / r.height * 100) + '%');
     litOne(el);
+
+    // Add ripple effect
+    const rippleTarget = e.target.closest('.tombol, .chip, .vote-btn, .tab, .event-toggle');
+    if (rippleTarget && !rippleTarget.disabled){
+      const rr = rippleTarget.getBoundingClientRect();
+      createRipple(rippleTarget, e.clientX - rr.left, e.clientY - rr.top);
+    }
   }, { passive: true });
 
   document.addEventListener('pointermove', (e) => {
@@ -1824,9 +1980,10 @@ function initScrollEffects(){
 /* ============================================================
    PREFETCH
    ============================================================ */
-function prefetchAll(){
+async function prefetchAll(){
   // jalankan paralel, tanpa menunggu intro
   // allSettled: satu request gagal tidak boleh menggagalkan yang lain
+  await syncVotedIds();
   Promise.allSettled([loadStats(), loadEvents(), loadListUmumPage(0, false)]);
 }
 
@@ -1839,9 +1996,6 @@ function init(){
   $('#tabnav').setAttribute('inert', '');
   $('#app').setAttribute('inert', '');
   $('#settingsBtn').setAttribute('inert', '');
-
-  // deteksi lite awal (sebelum applyLite user setting)
-  if (detectLite()) document.body.classList.add('lite');
 
   buildDoodles();
   initLanyard();

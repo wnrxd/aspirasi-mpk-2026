@@ -1,0 +1,7 @@
+# Artefak lokal — jangan di-commit
+test-v3.9.6.html
+.playwright-mcp/
+_arsip-v3.9/
+.venv/
+__pycache__/
+*.log
