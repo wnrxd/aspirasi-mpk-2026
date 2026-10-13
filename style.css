@@ -2002,3 +2002,39 @@ input[type="password"]{
     transform: none;
   }
 }
+
+/* ============================================================
+   PEMBARUAN J: alasan penolakan publik (v3.9.6)
+   ============================================================ */
+.card-alasan{
+  margin:0 0 14px;
+  padding:11px 14px;
+  border-radius:14px;
+  background:rgba(190,90,80,.10);
+  border:1px solid rgba(190,90,80,.28);
+  color:#8B3A32;
+  font-size:13.5px;
+  line-height:1.55;
+  word-break:break-word;
+}
+.card-alasan strong{ font-weight:700; }
+
+/* Modal alasan penolakan: textarea lebih pendek dari form aspirasi. */
+.alasan-ta{
+  min-height:96px;
+  resize:vertical;
+}
+.alasan-err{
+  min-height:1.2em;
+  color:#B8493F;
+  font-weight:600;
+  margin:8px 0 0;
+}
+
+/* Dark mode: alasan penolakan tetap terbaca. */
+[data-theme="dark"] .card-alasan{
+  background:rgba(190,90,80,.16);
+  border-color:rgba(190,90,80,.4);
+  color:#F0AFAA;
+}
+[data-theme="dark"] .alasan-err{ color:#F0AFAA; }

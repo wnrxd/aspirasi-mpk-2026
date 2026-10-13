@@ -1,4 +1,4 @@
-/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js — v3.9.6
+/* Aspirasi Digital MPK Mahardika SMAN 1 Cipari — script.js — v3.9.7
    Tanpa library. fetch langsung ke Supabase (PostgREST + GoTrue). */
 (() => {
 'use strict';
@@ -282,7 +282,7 @@ async function loadListUmumPage(offset, append){
   const fq = state.filter !== 'all' ? '&status=eq.' + encodeURIComponent(state.filter) : '';
   const hiddenCol = state.admin.active ? ',hidden' : '';
 
-  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id${hiddenCol}&event_id=is.null${fq}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
+  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id,alasan_penolakan${hiddenCol}&event_id=is.null${fq}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
   if (my !== state.listUmum.seq) return; // ada permintaan yang lebih baru (mis. filter diganti)
 
@@ -325,7 +325,7 @@ async function loadListEventPage(eventId, offset, append){
   if (!bucket.items.length) renderEventBody(eventId); // tampilkan skeleton selama memuat
 
   const hiddenCol = state.admin.active ? ',hidden' : '';
-  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id${hiddenCol}&event_id=eq.${eventId}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
+  const url = `/rest/v1/aspirasi?select=id,created_at,isi,status,votes,event_id,alasan_penolakan${hiddenCol}&event_id=eq.${eventId}&order=created_at.desc,id.desc&limit=21&offset=${offset}`;
   const r = await api(url);
   if (r.ok && Array.isArray(r.data)){
     const rows = r.data.slice(0, 20);
@@ -914,6 +914,18 @@ function buildCard(a, reveal){
   isi.className = 'card-isi';
   isi.textContent = a.isi;
 
+  // Alasan penolakan publik (hanya bila ada, untuk aspirasi Ditolak).
+  let alasanEl = null;
+  if (a.status === 'Ditolak' && a.alasan_penolakan){
+    alasanEl = document.createElement('p');
+    alasanEl.className = 'card-alasan';
+    alasanEl.setAttribute('role', 'note');
+    const lbl = document.createElement('strong');
+    lbl.textContent = 'Alasan: ';
+    alasanEl.appendChild(lbl);
+    alasanEl.appendChild(document.createTextNode(a.alasan_penolakan));
+  }
+
   const foot = document.createElement('div');
   foot.className = 'card-foot';
 
@@ -975,6 +987,7 @@ function buildCard(a, reveal){
 
   card.appendChild(top);
   card.appendChild(isi);
+  if (alasanEl) card.appendChild(alasanEl);
   card.appendChild(foot);
   return card;
 }
@@ -1026,10 +1039,23 @@ async function onVote(a, btn, numEl){
 async function onStatusChange(a, sel){
   const prev = a.status;
   const next = sel.value;
+
+  // Saat menolak, minta alasan opsional lewat modal khusus.
+  let alasan = null;
+  if (next === 'Ditolak'){
+    sel.value = prev; // kembalikan dulu; status berubah setelah sukses simpan.
+    const hasil = await askAlasanPenolakan();
+    if (hasil == null) return; // admin batal.
+    alasan = hasil; // bisa '' (tanpa alasan).
+  }
+
   a.status = next; // optimistic
+  const body = { p_id: a.id, p_status: next };
+  if (next === 'Ditolak' && alasan) body.p_alasan_penolakan = alasan;
+
   const r = await api('/rest/v1/rpc/admin_set_status', {
     method: 'POST',
-    body: { p_id: a.id, p_status: next }
+    body
   });
   if (!r.ok){
     toast(r.error || 'Gagal mengubah status', { err: true });
@@ -1037,13 +1063,85 @@ async function onStatusChange(a, sel){
     sel.value = prev;
     return;
   }
-  // update pill warna
+  sel.value = next;
+  // update pill warna + alasan tampil
   const card = sel.closest('.card');
   const pill = card && card.querySelector('.pill');
   if (pill){ pill.className = pillClass(next); pill.textContent = next; }
   const vb = card && card.querySelector('.vote-btn');
   if (vb){ vb.disabled = next === 'Ditolak'; vb.title = vb.disabled ? 'Aspirasi yang ditolak tidak bisa didukung' : ''; }
+
+  // Sinkronkan tampilan alasan publik.
+  a.alasan_penolakan = next === 'Ditolak' ? (alasan || null) : null;
+  const isiEl = card && card.querySelector('.card-isi');
+  let alasanEl = card && card.querySelector('.card-alasan');
+  if (a.status === 'Ditolak' && a.alasan_penolakan){
+    if (!alasanEl && isiEl){
+      alasanEl = document.createElement('p');
+      alasanEl.className = 'card-alasan';
+      alasanEl.setAttribute('role', 'note');
+      isiEl.after(alasanEl);
+    }
+    if (alasanEl){
+      alasanEl.replaceChildren();
+      const lbl = document.createElement('strong');
+      lbl.textContent = 'Alasan: ';
+      alasanEl.appendChild(lbl);
+      alasanEl.appendChild(document.createTextNode(a.alasan_penolakan));
+    }
+  } else if (alasanEl){
+    alasanEl.remove();
+  }
+
   toast('Status diperbarui');
+}
+
+/* Modal alasan penolakan: kembalikan string ('' = tanpa alasan) atau null (batal). */
+function askAlasanPenolakan(){
+  return new Promise(resolve => {
+    const m = $('#alasanModal');
+    const ta = $('#inpAlasan');
+    const yes = $('#btnAlasanSimpan'), no = $('#btnAlasanBatal');
+    const err = $('#alasanErr');
+    const MAX = 300;
+
+    ta.value = '';
+    ta.maxLength = MAX;
+    err.textContent = '';
+    const cnt = $('#alasanHitung');
+    cnt.textContent = MAX + ' karakter tersisa';
+    const onInput = () => {
+      const sisa = MAX - ta.value.length;
+      cnt.textContent = sisa + ' karakter tersisa';
+      cnt.classList.toggle('hampir', sisa <= 60);
+    };
+    ta.addEventListener('input', onInput);
+
+    const done = (v) => {
+      ta.removeEventListener('input', onInput);
+      yes.removeEventListener('click', onYes);
+      no.removeEventListener('click', onNo);
+      m.removeEventListener('click', onBack);
+      m.removeEventListener('keydown', onKey);
+      closeModal(m); resolve(v);
+    };
+    const onYes = () => {
+      const val = ta.value.trim();
+      if (val.length > MAX){ err.textContent = 'Alasan maksimal ' + MAX + ' karakter'; return; }
+      done(val);
+    };
+    const onNo = () => done(null);
+    const onBack = (e) => { if (e.target === m) done(null); };
+    const onKey = (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); yes.click(); }
+    };
+    yes.addEventListener('click', onYes);
+    no.addEventListener('click', onNo);
+    m.addEventListener('click', onBack);
+    m.addEventListener('keydown', onKey);
+    openModal(m);
+    setTimeout(() => ta.focus(), 60);
+  });
 }
 
 async function onToggleHidden(a, card){
@@ -1695,12 +1793,13 @@ function initSettings(){
   const btnS = $('#settingsBtn');
   const modalS = $('#settingsModal');
   const modalL = $('#loginModal');
+  const modalA = $('#alasanModal');
 
   btnS.addEventListener('click', () => {
     updateAdminUI();
     openModal(modalS);
   });
-  [modalS, modalL].forEach(modal => modal.addEventListener('keydown', e => {
+  [modalS, modalL, modalA].forEach(modal => modal.addEventListener('keydown', e => {
     if (e.key === 'Escape') { closeModal(modal); return; }
     if (e.key !== 'Tab') return;
     const items = [...modal.querySelectorAll(modalFocusable)];
@@ -1711,6 +1810,7 @@ function initSettings(){
   }));
   $('#btnSettingsClose').addEventListener('click', () => closeModal(modalS));
   modalS.addEventListener('click', (e) => { if (e.target === modalS) closeModal(modalS); });
+  modalA.addEventListener('click', (e) => { if (e.target === modalA) closeModal(modalA); });
 
   // admin toggle
   $('#btnAdminToggle').addEventListener('click', () => {
