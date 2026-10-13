@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Aspirasi Digital MPK Mahardika SMAN 1 Cipari — v3.9.6 -->
+<!-- Aspirasi Digital MPK Mahardika SMAN 1 Cipari — v3.9.7 -->
 <html lang="id">
 <head>
 <meta charset="utf-8">
@@ -370,6 +370,30 @@
       <button class="tombol biru" id="btnLoginMasuk">
         <span class="glow" aria-hidden="true"></span>
         Masuk
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal alasan penolakan -->
+<div class="modal-back" id="alasanModal" hidden role="dialog" aria-modal="true" aria-labelledby="alasanTitle">
+  <div class="modal glass">
+    <h2 id="alasanTitle">Tolak aspirasi</h2>
+    <p class="ket">Berikan alasan (opsional). Alasan ini akan tampil publik di kartu aspirasi.</p>
+    <label for="inpAlasan" class="sr-only">Alasan penolakan</label>
+    <textarea id="inpAlasan" class="alasan-ta" maxlength="300" placeholder="Contoh: bukan ranah MPK, duplikat, atau tidak layak…"></textarea>
+    <div class="form-baris" style="margin-top:8px;">
+      <span class="penghitung" id="alasanHitung">300 karakter tersisa</span>
+    </div>
+    <p class="ket alasan-err" id="alasanErr" role="alert"></p>
+    <div class="modal-actions">
+      <button class="tombol netral" id="btnAlasanBatal">
+        <span class="glow" aria-hidden="true"></span>
+        Batal
+      </button>
+      <button class="tombol bahaya" id="btnAlasanSimpan">
+        <span class="glow" aria-hidden="true"></span>
+        Tolak
       </button>
     </div>
   </div>
